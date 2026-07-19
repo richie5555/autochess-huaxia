@@ -363,7 +363,44 @@
     const el=document.getElementById('board'); if(!el) return; let html='';
     for (let y=0; y<8; y++) for (let x=0; x<BOARD_W; x++) { const k=`${x},${y}`; const u=state.board[k]; const ps=y>=4; const cls=`cell ${ps?'player-side':'enemy-side'} ${u?'occupied':''}`; html+=`<div class="${cls}" data-key="${k}">`; if (u) { const d=UNITS[u.id]; const eq=state.equipped[k]; const ei=eq?[eq.weapon,eq.armor,eq.accessory].filter(Boolean).map(id=>EQUIPMENT[id]?.emoji||'').join(''):''; const enh=state.enhance[k]||0; const ench=state.enchant[k]; const enchE=ench&&ENCHANTS[ench]?ENCHANTS[ench].emoji:''; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}${enh>0?`+${enh}`:''}</span>${ei?`<span class="unit-eq">${ei}${enchE}</span>`:''}`; } html+='</div>'; }
     el.innerHTML=html;
-    el.querySelectorAll('.cell.occupied').forEach(c => { c.onclick=()=>{ const k=c.dataset.key; if(state.board[k]&&confirm(`卖出 ${UNITS[state.board[k].id].name}?`)) sellUnit(true,k); }; });
+    el.querySelectorAll('.cell.occupied').forEach(c => {
+      let pressTimer=null;
+      c.addEventListener('touchstart',()=>{ pressTimer=setTimeout(()=>{ if(confirm(`卖出 ${UNITS[state.board[c.dataset.key].id].name}?`)) sellUnit(true,c.dataset.key); pressTimer=null; },600); });
+      c.addEventListener('touchend',()=>{ if(pressTimer){clearTimeout(pressTimer);pressTimer=null; showUnitInfo(c.dataset.key);} });
+      c.onclick=()=>{ if(pressTimer!==null) return; showUnitInfo(c.dataset.key); };
+    });
+  }
+  function showUnitInfo(key) {
+    const u = state.board[key]; if (!u) return;
+    const d = UNITS[u.id]; if (!d) return;
+    const stats = calcStats(u, key);
+    const eq = state.equipped[key]||{};
+    const enh = state.enhance[key]||0;
+    const ench = state.enchant[key];
+    const enchName = ench&&ENCHANTS[ench] ? ENCHANTS[ench].emoji+ENCHANTS[ench].name : '无';
+    const syns = getSynergies(state.board).filter(s=>s.active);
+    const mySyn = syns.filter(s=>{ const def=d; return (s.type==='race'&&def.race===s.key)||(s.type==='job'&&def.job===s.key); });
+    const eqList = EQUIP_SLOTS.map(slot=>{ const eId=eq[slot]; return eId ? EQUIPMENT[eId].emoji+EQUIPMENT[eId].name : EQUIP_SLOTS_NAME[slot]; }).join(' ');
+    const modal=document.getElementById('sys-modal');
+    let html=`<div class="sys-modal-content"><div class="unit-info-panel">`;
+    html+=`<div class="unit-info-header"><span class="unit-info-emoji">${d.emoji}</span><span class="unit-info-name">${d.name}</span><span class="unit-info-stars">${'★'.repeat(u.star)}${enh>0?`+${enh}`:''}</span></div>`;
+    html+=`<div class="unit-info-stats">`;
+    html+=`<div class="stat-row"><span>❤️生命</span><span class="stat-val">${stats.hp}</span></div>`;
+    html+=`<div class="stat-row"><span>⚔️攻击</span><span class="stat-val">${stats.atk}</span></div>`;
+    html+=`<div class="stat-row"><span>🛡️护甲</span><span class="stat-val">${stats.armor}</span></div>`;
+    html+=`<div class="stat-row"><span>🔮魔抗</span><span class="stat-val">${stats.mr}</span></div>`;
+    html+=`<div class="stat-row"><span>🏹射程</span><span class="stat-val">${stats.range}</span></div>`;
+    html+=`<div class="stat-row"><span>⚡攻速</span><span class="stat-val">${stats.atkSpd.toFixed(2)}</span></div>`;
+    html+=`</div>`;
+    html+=`<div class="unit-info-section"><h4>技能</h4><div class="skill-row">${d.skill.emoji||'✨'} ${d.skill.name}: ${d.skill.desc}</div></div>`;
+    html+=`<div class="unit-info-section"><h4>种族/职业</h4><div class="race-job-row">${RACES[d.race].name}·${JOBS[d.job].name}</div>`;
+    if (mySyn.length>0) html+=`<div class="syn-active">${mySyn.map(s=>`${s.name}${s.count}/${s.need} ✅`).join(' ')}</div>`;
+    html+=`</div>`;
+    html+=`<div class="unit-info-section"><h4>装备</h4><div class="equip-list-row">${eqList}</div></div>`;
+    html+=`<div class="unit-info-section"><h4>附魔</h4><div>${enchName}</div></div>`;
+    html+=`<div class="unit-info-section"><h4>强化</h4><div>+${enh} ${enh>0?`(HP/ATK +${(ENHANCE_BONUS[enh]?.hp_pct*100||0)}%)`:''}</div></div>`;
+    html+=`</div><button class="sys-close" onclick="document.getElementById('sys-modal').classList.add('hidden')">关闭</button></div>`;
+    modal.innerHTML=html; modal.classList.remove('hidden');
   }
   function renderBench() {
     const el=document.getElementById('bench'); if(!el) return;
