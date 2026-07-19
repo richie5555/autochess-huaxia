@@ -87,7 +87,7 @@
       }
       if (removed < MERGE_NEED) { for (const [key, val] of Object.entries(state.board)) { if (removed >= MERGE_NEED) break; if (val.id === id && val.star === star) { delete state.board[key]; removed++; } } }
       const newStar = star + 1;
-      if (newStar <= 3) { state.bench.push({id, star: newStar}); toast(`${UNITS[id].emoji} ${UNITS[id].name} 升至${newStar}星！`, '⭐'); sfx.discover(); tryMerge(id, newStar); }
+      state.bench.push({id, star: newStar}); toast(`${UNITS[id].emoji} ${UNITS[id].name} 升至${newStar}星！`, '⭐'); sfx.discover(); tryMerge(id, newStar);
       return true;
     }
     return false;
@@ -102,7 +102,7 @@
     let refund = 0;
     if (fromBoard) {
       const u = state.board[key]; if (!u) return;
-      refund = Math.floor(UNITS[u.id].cost * (u.star === 3 ? 9 : u.star === 2 ? 3 : 1) * 0.7);
+      refund = Math.floor(UNITS[u.id].cost * Math.pow(3, u.star - 1) * 0.7);
       // 退回装备
       const eq = state.equipped[key];
       if (eq) { for (const slot of EQUIP_SLOTS) { if (eq[slot]) state.inventory.push(eq[slot]); } delete state.equipped[key]; }
@@ -111,7 +111,7 @@
       // 备战席卖出
       const idx = key;
       const u = state.bench[idx]; if (!u) return;
-      refund = Math.floor(UNITS[u.id].cost * (u.star === 3 ? 9 : u.star === 2 ? 3 : 1) * 0.7);
+      refund = Math.floor(UNITS[u.id].cost * Math.pow(3, u.star - 1) * 0.7);
       state.bench.splice(idx, 1);
     }
     state.gold += refund; saveState(); render();
@@ -142,7 +142,7 @@
 
   function calcStats(unit, key) {
     const def = UNITS[unit.id];
-    const starMul = unit.star === 3 ? 3 : unit.star === 2 ? 1.8 : 1;
+    const starMul = unit.star <= 1 ? 1 : unit.star === 2 ? 1.8 : 3 * Math.pow(1.5, unit.star - 3);
     let hp = def.base.hp * starMul, atk = def.base.atk * starMul;
     let range = def.base.range, atkSpd = def.base.atkSpd;
     let armor = def.base.armor * starMul, mr = def.base.mr * starMul;
