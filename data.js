@@ -78,13 +78,14 @@ const BOARD_W = 8, BOARD_H = 4; // 玩家半场 8x4
 // 备战席数量
 const BENCH_SIZE = 9;
 // 初始金币
-const START_GOLD = 5;
-// 利息每10金1利息，上限5
-const INTEREST_PER = 10, INTEREST_MAX = 5;
+const START_GOLD = 8;
+// 利息每5金1利息，上限5
+const INTEREST_PER = 5, INTEREST_MAX = 5;
 // 连胜/连败奖励
-const STREAK_GOLD = {1:0, 2:1, 3:1, 4:2, 5:2, 6:3, 7:3, 8:3, 9:3};
-// 升级费用（玩家等级影响商店概率和上场数量）
-const LEVEL_UP_COST = [0, 0, 2, 6, 10, 20, 36, 56, 80];
+const STREAK_GOLD = {1:0, 2:1, 3:2, 4:2, 5:3, 6:3, 7:4, 8:4, 9:5};
+// 买经验费用（每次2金，4次升1级）
+const XP_COST = 2;
+const XP_PER_LEVEL = 4;
 const MAX_PLAYER_LEVEL = 8;
 
 // 商店概率（按费用）[1费,2费,3费,4费,5费]
