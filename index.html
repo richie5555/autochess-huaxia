@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0d1117">
+  <title>自走棋·华夏</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="topbar"></div>
+    <div id="board"></div>
+    <div id="synergies"></div>
+    <div id="bench"></div>
+    <div id="shop"></div>
+
+    <div id="win-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="win-title">🏆 通关 🏆</div>
+        <p>你击败了第10波，天下无敌！</p>
+        <button onclick="location.reload()">再玩一次</button>
+      </div>
+    </div>
+  </div>
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
