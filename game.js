@@ -57,8 +57,23 @@
     }
     state.gold -= cost;
     state.shop[idx] = null;
-    state.bench.push({id, star:1});
     if (!state.discovered.includes(id)) state.discovered.push(id);
+    // 自动放到棋盘（优先），满了放备战席
+    let placed = false;
+    if (canPlaceOnBoard()) {
+      for (let y = 4; y < 8; y++) {
+        for (let x = 0; x < BOARD_W; x++) {
+          const key = `${x},${y}`;
+          if (!state.board[key]) {
+            state.board[key] = {id, star:1};
+            placed = true;
+            break;
+          }
+        }
+        if (placed) break;
+      }
+    }
+    if (!placed) state.bench.push({id, star:1});
     tryMerge(id, 1);
     saveState(); render();
   }
@@ -173,7 +188,7 @@
     c.team = team; c.x = x; c.y = y;
     c.atkCd = 0; c.dead = false; c.target = null;
     c.attackFlash = 0; c.skillFlash = 0; c.hitFlash = 0;
-    c.deathFade = 0; c.dmgTexts = [];
+    c.deathFade = 0; c.dmgTexts = []; c.name = u.name;;
     return c;
   }
 
@@ -225,7 +240,7 @@
     canvas.height = canvas.offsetHeight;
     const cw = canvas.width / 8, ch = canvas.height / 8;
 
-    battle = { all, player, enemy, tick: 0, maxTick: 900, done: false, callback, cw, ch };
+    battle = { all, player, enemy, tick: 0, maxTick: 1500, done: false, callback, cw, ch };
 
     function frame() {
       if (!battle || battle.done) return;
@@ -271,8 +286,8 @@
           // 移动（加速）
           const dx = Math.sign(u.target.x - u.x);
           const dy = Math.sign(u.target.y - u.y);
-          if (Math.abs(u.target.x - u.x) > Math.abs(u.target.y - u.y)) u.x += dx * 0.3;
-          else u.y += dy * 0.3;
+          if (Math.abs(u.target.x - u.x) > Math.abs(u.target.y - u.y)) u.x += dx * 0.15;
+          else u.y += dy * 0.15;
         }
       }
 
@@ -289,7 +304,7 @@
           overlay.classList.add('hidden');
           callback({ won, pAlive, eAlive, ticks: battle.tick, synergies });
           battle = null;
-        }, 600);
+        }, 1200);
         return;
       }
       requestAnimationFrame(frame);
@@ -367,6 +382,10 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(u.emoji, px, py);
+      // 单位名称（缩小显示在圆圈下方）
+      ctx.font = '9px sans-serif';
+      ctx.fillStyle = u.team === 'player' ? '#3fb950' : '#f85149';
+      ctx.fillText(u.name || '', px, py + r + 10);
 
       // 星级
       if (u.star > 1) {
@@ -609,12 +628,14 @@
       }
       html += '</div>';
     }
-    html += `</div><div class="shop-actions"><button id="refresh-btn" class="action-btn ${state.gold>=2?'':'disabled'}">刷新2💰</button><button id="battle-btn" class="battle-btn">⚔️ 开始战斗</button></div>`;
+    const nextLevel = LEVELS[state.level - 1];
+    const nextDesc = nextLevel ? `⚔️ 第${nextLevel.wave}波 (${nextLevel.enemies.length}敌)` : '🏆 通关';
+    html += `</div><div class="shop-actions"><button id="refresh-btn" class="action-btn ${state.gold>=2?'':'disabled'}">🔄1💰</button><button id="battle-btn" class="battle-btn">${nextDesc}</button></div>`;
     el.innerHTML = html;
     document.getElementById('refresh-btn').onclick = () => {
-      if (state.gold < 2) { toast('💰金币不足！'); return; }
+      if (state.gold < 1) { toast('💰金币不足！'); return; }
       initAudio(); sfx.click();
-      state.gold -= 2; refreshShop(); saveState(); render();
+      state.gold -= 1; refreshShop(); saveState(); render();
     };
     document.getElementById('battle-btn').onclick = () => { initAudio(); startBattle(); };
     document.querySelectorAll('.shop-slot:not(.empty) .shop-unit').forEach(s => {
