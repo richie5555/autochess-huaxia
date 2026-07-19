@@ -220,7 +220,7 @@
     overlay.classList.remove('hidden');
     canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
     const cw = canvas.width/8, ch = canvas.height/8;
-    battle = {all, player, enemy, tick:0, maxTick:1200, done:false, callback, cw, ch, synergies, overlay, canvas, info, lastTime:0};
+    battle = {all, player, enemy, tick:0, maxTick:600, done:false, callback, cw, ch, synergies, overlay, canvas, info, lastTime:0};
     
     setTimeout(frame, 16);
   }
@@ -274,7 +274,7 @@
     if (pAlive===0 || eAlive===0 || battle.tick>=battle.maxTick) {
       battle.done = true; const won = eAlive===0 && pAlive>0;
       const cb = battle.callback, sy = battle.synergies, ov = battle.overlay;
-      setTimeout(() => { ov.classList.add('hidden'); cb({won, pAlive, eAlive, ticks: battle.tick, synergies: sy}); battle = null; }, 1200);
+      setTimeout(() => { try { ov.classList.add('hidden'); cb({won, pAlive, eAlive, ticks: battle.tick, synergies: sy}); } catch(e) { console.error('battle callback error:', e.message); } battle = null; }, 300);
       return;
     }
     setTimeout(frame, 16);
