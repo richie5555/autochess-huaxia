@@ -120,12 +120,12 @@ const GEM_TYPES = {
   purple:{name:"紫宝石",emoji:"🟣",stat:"crit",valPerLevel:0.02,color:"#c4f"},
 };
 const GEM_MAX_LEVEL = 5;
-const GEM_MERGE_COST = 3; // 3个同级合成1个高1级
+const GEM_MERGE_COST = 2; // 3个同级合成1个高1级
 
 // === 宠物系统 ===
 const PETS = {
   p1:{name:"小灵狐",emoji:"🦊",skill:{type:"goldBonus",val:0.1,desc:"金币+10%"},cost:0},
-  p2:{name:"玄龟仔",emoji:"🐢",skill:{type:"hpBonus",val:0.05,desc:"全队生命+5%"},cost:50},
+  p2:{name:"玄龟仔",emoji:"🐢",skill:{type:"hpBonus",val:0.05,desc:"全队生命+5%"},cost:30},
   p3:{name:"火精灵",emoji:"🔥",skill:{type:"atkBonus",val:0.05,desc:"全队攻击+5%"},cost:100},
   p4:{name:"小青龙",emoji:"🐲",skill:{type:"expBonus",val:0.3,desc:"经验+30%"},cost:200},
   p5:{name:"凤凰雏",emoji:"🦚",skill:{type:"revive",val:0.3,desc:"全军复活30%血(每场一次)"},cost:500},
@@ -136,7 +136,7 @@ const PET_UNLOCK_WAVE = 3; // 第3波解锁
 // === 翅膀系统 ===
 const WINGS = {
   w0:{name:"无翅膀",emoji:"",skill:{type:"none",val:0,desc:"未装备"},cost:0},
-  w1:{name:"翠羽翼",emoji:"🪽",skill:{type:"dodge",val:0.05,desc:"闪避+5%"},cost:100},
+  w1:{name:"翠羽翼",emoji:"🪽",skill:{type:"dodge",val:0.05,desc:"闪避+5%"},cost:50},
   w2:{name:"烈焰翼",emoji:"🔥",skill:{type:"burnAura",val:0.1,desc:"近战反伤灼烧10%"},cost:300},
   w3:{name:"冰霜翼",emoji:"❄️",skill:{type:"slowAura",val:0.15,desc:"减速攻击者15%"},cost:500},
   w4:{name:"雷翼",emoji:"⚡",skill:{type:"chainLight",val:0.2,desc:"攻击20%闪电链"},cost:800},
