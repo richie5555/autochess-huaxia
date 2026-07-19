@@ -129,3 +129,36 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--
 
 /* 禁用按钮 */
 .action-btn.disabled { opacity:0.4; }
+
+
+/* v5 新增样式 */
+
+/* 钻石显示 */
+.top-stats .diamond { color: #4af; font-weight: 600; }
+
+/* 坐骑 */
+.mount-grid, .shop-dia-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; }
+.mount-item { border:1px solid var(--border); border-radius:4px; padding:8px; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10px; cursor:pointer; background:var(--bg); }
+.mount-item.active { border-color:var(--accent); background:rgba(200,160,74,0.1); }
+.mount-item:active { transform:scale(0.97); }
+
+/* 强化 */
+.enhance-row { display:flex; align-items:center; justify-content:space-between; padding:6px; border-bottom:1px solid var(--border); font-size:11px; }
+.enhance-btn { padding:4px 10px; font-size:10px; background:var(--accent); color:#000; border:none; border-radius:3px; cursor:pointer; }
+.max-tag { color:var(--green); font-size:10px; }
+
+/* 附魔 */
+.enchant-row { display:flex; align-items:center; justify-content:space-between; padding:6px; border-bottom:1px solid var(--border); font-size:11px; }
+.enchant-btn { padding:4px 10px; font-size:10px; background:#c4f; color:#fff; border:none; border-radius:3px; cursor:pointer; }
+
+/* 钻石商店 */
+.shop-dia-item { border:1px solid var(--border); border-radius:4px; padding:8px; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10px; cursor:pointer; background:var(--bg); }
+.shop-dia-item:active { transform:scale(0.97); }
+.tier-myth { color:#f0f; font-weight:700; font-size:9px; }
+.tier-legend { color:#f80; font-weight:700; font-size:9px; }
+
+/* 系统面板tab滚动 */
+.sys-tabs { overflow-x:auto; }
+
+/* 棋盘强化标识 */
+.unit-stars { color: var(--accent); }
