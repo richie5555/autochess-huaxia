@@ -15,12 +15,26 @@
       inventory: [], gems: {red:0, blue:0, green:0, yellow:0, purple:0},
       equipped: {}, gemSlots: {}, pet: null, petUnlocked: [],
       wing: 'w0', wingUnlocked: ['w0'], totalWaves: 0,
+      diamonds: 0, mount: 'm0', mountUnlocked: ['m0'],
+      enhance: {}, // {unitKey: level}
+      enchant: {}, // {unitKey: enchantId}
+      enchantScrolls: 0,
     };
   }
   function loadState() {
     try {
       const s = localStorage.getItem(STORAGE_KEY);
-      if (s) { state = JSON.parse(s); state.wave = state.wave || 1; return true; }
+      if (s) {
+        state = JSON.parse(s);
+        state.wave = state.wave || 1;
+        // 初始化v5新增字段（兼容v4存档）
+        if (state.diamonds === undefined) state.diamonds = 0;
+        if (!state.mount) state.mount = 'm0';
+        if (!state.mountUnlocked) state.mountUnlocked = ['m0'];
+        if (!state.enhance) state.enhance = {};
+        if (!state.enchant) state.enchant = {};
+        return true;
+      }
     } catch(e) {}
     state = defaultState(); return false;
   }
@@ -86,7 +100,20 @@
   }
   function sellUnit(fromBoard, key) {
     let refund = 0;
-    if (fromBoard) { const u = state.board[key]; if (!u) return; refund = Math.floor(UNITS[u.id].cost * (u.star === 3 ? 9 : u.star === 2 ? 3 : 1) * 0.7); delete state.board[key]; }
+    if (fromBoard) {
+      const u = state.board[key]; if (!u) return;
+      refund = Math.floor(UNITS[u.id].cost * (u.star === 3 ? 9 : u.star === 2 ? 3 : 1) * 0.7);
+      // 退回装备
+      const eq = state.equipped[key];
+      if (eq) { for (const slot of EQUIP_SLOTS) { if (eq[slot]) state.inventory.push(eq[slot]); } delete state.equipped[key]; }
+      delete state.board[key]; delete state.enhance[key]; delete state.enchant[key];
+    } else {
+      // 备战席卖出
+      const idx = key;
+      const u = state.bench[idx]; if (!u) return;
+      refund = Math.floor(UNITS[u.id].cost * (u.star === 3 ? 9 : u.star === 2 ? 3 : 1) * 0.7);
+      state.bench.splice(idx, 1);
+    }
     state.gold += refund; saveState(); render();
   }
 
@@ -125,6 +152,14 @@
     if (state.wing && state.wing!=='w0') { const w = WINGS[state.wing]; if (w && w.skill.type==='allStat') { hp*=(1+w.skill.val); atk*=(1+w.skill.val); } }
     // 宝石加成
     for (const [color, g] of Object.entries(GEM_TYPES)) { const lv = state.gems[color+'_level']||0; if (lv>0) { if (g.stat==='hp') hp += g.valPerLevel*lv; if (g.stat==='atk') atk += g.valPerLevel*lv; if (g.stat==='mr') mr += g.valPerLevel*lv; if (g.stat==='atkSpd') atkSpd += g.valPerLevel*lv; if (g.stat==='crit') atk += 0; } }
+    // 强化加成
+    const enhLv = state.enhance[key]||0;
+    if (enhLv>0) { const b=ENHANCE_BONUS[enhLv]; if(b){ hp*=(1+b.hp_pct); atk*=(1+b.atk_pct); } }
+    // 附魔加成
+    const ench = state.enchant[key];
+    if (ench && ENCHANTS[ench]) { const es=ENCHANTS[ench].stats; if(es.hp) hp+=es.hp; if(es.atk_pct) atk*=(1+es.atk_pct); if(es.hp_pct) hp*=(1+es.hp_pct); if(es.atkSpd) atkSpd+=es.atkSpd; if(es.armor) armor+=es.armor; if(es.mr) mr+=es.mr; if(es.crit) atk+=0; }
+    // 坐骑加成
+    if (state.mount && state.mount!=='m0') { const m=MOUNTS[state.mount]; if(m){ if(m.skill.type==='hpBonus') hp*=(1+m.skill.val); if(m.skill.type==='atkBonus') atk*=(1+m.skill.val); if(m.skill.type==='allBonus'){ hp*=(1+m.skill.val); atk*=(1+m.skill.val); } if(m.skill.type==='atkSpd') atkSpd+=m.skill.val; } }
     return {hp:Math.round(hp), maxHp:Math.round(hp), atk:Math.round(atk), range, atkSpd, armor:Math.round(armor), mr:Math.round(mr), skill:def.skill, emoji:def.emoji, name:def.name, star:unit.star, cost:def.cost};
   }
 
@@ -185,12 +220,18 @@
     overlay.classList.remove('hidden');
     canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
     const cw = canvas.width/8, ch = canvas.height/8;
-    battle = {all, player, enemy, tick:0, maxTick:1200, done:false, callback, cw, ch, synergies, overlay, canvas, info};
-    requestAnimationFrame(frame);
+    battle = {all, player, enemy, tick:0, maxTick:1200, done:false, callback, cw, ch, synergies, overlay, canvas, info, lastTime:0};
+    
+    setTimeout(frame, 16);
   }
   function frame() {
     if (!battle || battle.done) return;
-    battle.tick++;
+    var now = Date.now();
+    var dt = battle.lastTime ? Math.min(200, now - battle.lastTime) : 16;
+    battle.lastTime = now;
+    var steps = Math.max(1, Math.round(dt / 16));
+    for (var s = 0; s < steps && !battle.done; s++) {
+      battle.tick++;
     for (const u of battle.all) {
       if (u.hp <= 0) { if (u.revivePct && !u.revived) { u.revived=true; u.hp=Math.round(u.maxHp*u.revivePct); u.shield=0; u.stunTimer=0; u.dmgTexts.push({val:0,life:40,x:0,y:0,crit:false,heal:true}); } else { u.dead=true; u.deathFade=Math.min(1,u.deathFade+0.05); continue; } }
       if (u.hitFlash>0) u.hitFlash--; if (u.attackFlash>0) u.attackFlash--; if (u.skillFlash>0) u.skillFlash--;
@@ -225,6 +266,7 @@
         if (Math.abs(u.target.x-u.x) > Math.abs(u.target.y-u.y)) u.x += dx*sp; else u.y += dy*sp;
       }
     }
+    } // end steps loop
     const pAlive = battle.player.filter(u=>u.hp>0).length;
     const eAlive = battle.enemy.filter(u=>u.hp>0).length;
     drawBattle(battle.canvas, battle);
@@ -235,7 +277,7 @@
       setTimeout(() => { ov.classList.add('hidden'); cb({won, pAlive, eAlive, ticks: battle.tick, synergies: sy}); battle = null; }, 1200);
       return;
     }
-    requestAnimationFrame(frame);
+    setTimeout(frame, 16);
   }
 
 
@@ -287,13 +329,14 @@
         state.gold += reward; toast(`胜利！+${reward}金`, '🏆'); sfx.success();
         const drop = rollEquip(); if (drop) { state.inventory.push(drop); toast(`获得${EQUIPMENT[drop].emoji} ${EQUIPMENT[drop].name}！`, '📦'); }
         if (Math.random()<0.3) { const cs=Object.keys(GEM_TYPES); const gc=cs[Math.floor(Math.random()*cs.length)]; state.gems[gc]=(state.gems[gc]||0)+1; toast(`获得${GEM_TYPES[gc].emoji} ${GEM_TYPES[gc].name}！`, '💎'); }
-        if (level.isBoss) { state.gold += waveGold; toast(`Boss击破！额外+${waveGold}金！`, '👑'); }
+        if (level.isBoss) { state.gold += waveGold; toast(`Boss击破！额外+${waveGold}金！`, '👑'); if (Math.random() < 0.3) { state.diamonds = (state.diamonds||0) + 1; toast('获得1💎钻石！', '💎'); } }
       } else {
         state.loseStreak++; state.winStreak = 0;
         const lb = STREAK_GOLD[Math.min(state.loseStreak,9)]||0;
         const it = Math.min(INTEREST_MAX, Math.floor(state.gold/INTEREST_PER));
         const lg = 7+lb+it; state.gold += lg; toast(`失败...+${lg}金（继续推进）`, '💀'); sfx.fail();
       }
+      if (state.wave % 10 === 0) { state.diamonds = (state.diamonds||0) + 1; toast(`通关${state.wave}波! 奖励1💎`, '🎁'); }
       state.wave++; state.totalWaves = Math.max(state.totalWaves||0, state.wave-1);
       refreshShop(); saveState(); render();
     });
@@ -314,7 +357,7 @@
     const nl=getLevel(state.wave);
     const pe=state.pet?PETS[state.pet].emoji:'';
     const we=state.wing&&state.wing!=='w0'?WINGS[state.wing].emoji:'';
-    el.innerHTML=`<div class="top-info"><span class="title">华夏</span><span class="level-badge">Lv.${state.playerLevel}</span>${pe?`<span class="pet-badge">${pe}</span>`:''}${we?`<span class="wing-badge">${we}</span>`:''}</div><div class="top-stats"><span class="gold">💰${state.gold}</span><span class="wave">${state.wave}/∞</span><span class="streak">${si}</span><span class="interest">息+${it}</span></div><div class="top-actions"><button class="action-btn" onclick="window._ac.buyXP()">经验${state.playerLevel>=10?'MAX':`${XP_COST}💰 ${state.xp|0}/${XP_PER_LEVEL}`}</button><button class="action-btn" onclick="window._ac.toggleLock()">${state.lockedShop?'🔒':'🔓'}</button><button class="action-btn" onclick="window._ac.showSystems('equip')">🎒${state.inventory.length}</button></div>`;
+    el.innerHTML=`<div class="top-info"><span class="title">华夏</span><span class="level-badge">Lv.${state.playerLevel}</span>${pe?`<span class="pet-badge">${pe}</span>`:''}${we?`<span class="wing-badge">${we}</span>`:''}</div><div class="top-stats"><span class="gold">💰${state.gold}</span><span class="diamond">💎${state.diamonds||0}</span><span class="wave">${state.wave}/∞</span><span class="streak">${si}</span><span class="interest">息+${it}</span></div><div class="top-actions"><button class="action-btn" onclick="window._ac.buyXP()">经验${state.playerLevel>=10?'MAX':`${XP_COST}💰 ${state.xp|0}/${XP_PER_LEVEL}`}</button><button class="action-btn" onclick="window._ac.toggleLock()">${state.lockedShop?'🔒':'🔓'}</button><button class="action-btn" onclick="window._ac.showSystems('equip')">🎒${state.inventory.length}</button></div>`;
   }
   function renderBoard() {
     const el=document.getElementById('board'); if(!el) return; let html='';
@@ -324,10 +367,15 @@
   }
   function renderBench() {
     const el=document.getElementById('bench'); if(!el) return;
-    let html=`<div class="bench-label">备战席 ${state.bench.length}/${BENCH_SIZE}</div><div class="bench-slots">`;
+    let html=`<div class="bench-label">备战席 ${state.bench.length}/${BENCH_SIZE} <span style="float:right;color:var(--text-dim);font-size:8px">长按卖出</span></div><div class="bench-slots">`;
     for (let i=0; i<BENCH_SIZE; i++) { const u=state.bench[i]; html+=`<div class="bench-slot ${u?'occupied':''}" data-idx="${i}">`; if (u) { const d=UNITS[u.id]; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}</span><span class="unit-cost">${d.cost}💰</span>`; } html+='</div>'; }
     el.innerHTML=html+'</div>';
-    el.querySelectorAll('.bench-slot.occupied').forEach(s => { s.onclick=()=>{ const idx=parseInt(s.dataset.idx); for(let y=4;y<8;y++) for(let x=0;x<BOARD_W;x++) { const k=`${x},${y}`; if(!state.board[k]) { initAudio(); sfx.click(); placeUnit(idx,x,y); return; } } toast('棋盘已满！'); }; });
+    el.querySelectorAll('.bench-slot.occupied').forEach(s => {
+      let pressTimer=null;
+      s.addEventListener('touchstart',()=>{ pressTimer=setTimeout(()=>{ if(confirm('卖出这个单位?')) sellUnit(false,parseInt(s.dataset.idx)); pressTimer=null; },600); });
+      s.addEventListener('touchend',()=>{ if(pressTimer){clearTimeout(pressTimer);pressTimer=null; const idx=parseInt(s.dataset.idx); for(let y=4;y<8;y++) for(let x=0;x<BOARD_W;x++) { const k=`${x},${y}`; if(!state.board[k]) { initAudio(); sfx.click(); placeUnit(idx,x,y); return; } } toast('棋盘已满！'); } });
+      s.onclick=()=>{ if(pressTimer!==null) return; const idx=parseInt(s.dataset.idx); for(let y=4;y<8;y++) for(let x=0;x<BOARD_W;x++) { const k=`${x},${y}`; if(!state.board[k]) { initAudio(); sfx.click(); placeUnit(idx,x,y); return; } } toast('棋盘已满！'); };
+    });
   }
   function renderShop() {
     const el=document.getElementById('shop'); if(!el) return;
@@ -349,12 +397,83 @@
     else if (tab==='gem') { html+='<div class="gem-grid">'; for (const [color,g] of Object.entries(GEM_TYPES)) { const c=state.gems[color]||0; const lv=state.gems[color+'_level']||0; html+=`<div class="gem-item" style="border-color:${g.color}"><span>${g.emoji}</span><span style="color:${g.color}">${g.name}</span><span>x${c}</span><span>Lv.${lv}</span>${c>=GEM_MERGE_COST?`<button onclick="window._ac.mergeGems('${color}')">合成</button>`:''}</div>`; } html+='</div>'; }
     else if (tab==='pet') { if (state.wave<PET_UNLOCK_WAVE) html+=`<p class="empty-text">第${PET_UNLOCK_WAVE}波解锁</p>`; else { html+='<div class="pet-grid">'; for (const [id,p] of Object.entries(PETS)) { const ul=state.petUnlocked.includes(id); const ac=state.pet===id; html+=`<div class="pet-item ${ac?'active':''}" ${ul||p.cost===0?`onclick="window._ac.unlockPet('${id}')"`:''}><span>${p.emoji}</span><span>${p.name}</span><span>${p.skill.desc}</span>${ul?`<span>${ac?'装备中':'点击装备'}</span>`:`<span>${p.cost}💰</span>`}</div>`; } html+='</div>'; } }
     else if (tab==='wing') { if (state.wing<WING_UNLOCK_WAVE) html+=`<p class="empty-text">第${WING_UNLOCK_WAVE}波解锁</p>`; else { html+='<div class="wing-grid">'; for (const [id,w] of Object.entries(WINGS)) { const ul=state.wingUnlocked.includes(id); const ac=state.wing===id; html+=`<div class="wing-item ${ac?'active':''}" ${ul||w.cost===0?`onclick="window._ac.unlockWing('${id}')"`:''}><span>${w.emoji||'❌'}</span><span>${w.name}</span><span>${w.skill.desc}</span>${ul?`<span>${ac?'装备中':'点击装备'}</span>`:`<span>${w.cost}💰</span>`}</div>`; } html+='</div>'; } }
+    else if (tab==='mount') { if (state.wave<MOUNT_UNLOCK_WAVE) html+=`<p class="empty-text">第${MOUNT_UNLOCK_WAVE}波解锁坐骑</p>`; else { html+='<div class="mount-grid">'; for (const [id,m] of Object.entries(MOUNTS)) { const ul=state.mountUnlocked.includes(id); const ac=state.mount===id; html+=`<div class="mount-item ${ac?'active':''}" ${ul||m.cost===0?`onclick="window._ac.unlockMount('${id}')"`:''}><span>${m.emoji}</span><span>${m.name}</span><span>${m.skill.desc}</span>${ul?`<span>${ac?'装备中':'点击装备'}</span>`:`<span>${m.cost}💰</span>`}</div>`; } html+='</div>'; } }
+    else if (tab==='enhance') { html+='<h3>装备强化</h3><p class="hint">选择棋盘上的单位进行强化，最高+9</p>'; for (const [key,u] of Object.entries(state.board)) { const d=UNITS[u.id]; const lv=state.enhance[key]||0; const cost=lv<ENHANCE_MAX?ENHANCE_COSTS[lv]:0; html+=`<div class="enhance-row"><span>${d.emoji}${d.name}${'★'.repeat(u.star)} +${lv}</span>${lv<ENHANCE_MAX?`<button class="enhance-btn" onclick="window._ac.enhanceUnit('${key}')">强化${cost}💰</button>`:'<span class="max-tag">已满级</span>'}</div>`; } }
+    else if (tab==='enchant') { html+='<h3>附魔系统</h3>'; html+=`<p class="hint">附魔卷轴: ${state.enchantScrolls||0} | 消耗: ${ENCHANT_COST}💰+1卷轴</p>`; for (const [key,u] of Object.entries(state.board)) { const d=UNITS[u.id]; const ench=state.enchant[key]||'none'; const enchName=ENCHANTS[ench]?ENCHANTS[ench].name:'无'; const enchE=ENCHANTS[ench]?ENCHANTS[ench].emoji:''; html+=`<div class="enchant-row"><span>${d.emoji}${d.name} ${enchE}${enchName}</span><button class="enchant-btn" onclick="window._ac.enchantUnit('${key}')">附魔(${ENCHANT_COST}💰+📜)</button></div>`; } }
+    else if (tab==='shop') { html+='<h3>💎钻石商店</h3>'; html+=`<p class="hint">当前钻石: ${state.diamonds||0}💎 | Boss波掉落 | 每10波送1💎</p>`; html+='<h4>神话物种(1💎)</h4><div class="shop-dia-grid">'; for (const [id,u] of Object.entries(DIAMOND_SHOP.units)) { html+=`<div class="shop-dia-item" onclick="window._ac.buyDiamondUnit('${id}')"><span>${u.emoji||'❓'}</span><span>${u.name}</span><span class="tier-${u.tier}">${u.tier==='myth'?'神话':'传说'}</span><span>${u.cost}💎</span></div>`; } html+='</div>'; html+='<h4>神话装备</h4><div class="shop-dia-grid">'; for (const [id,e] of Object.entries(DIAMOND_SHOP.equipment)) { html+=`<div class="shop-dia-item" onclick="window._ac.buyDiamondEquip('${id}')"><span>${e.emoji}</span><span>${e.name}</span><span class="tier-${e.rarity>=6?'myth':'legend'}">${e.rarity>=6?'神话':'传说'}</span><span>${e.cost}💎</span></div>`; } html+='</div>'; html+='<h4>资源兑换</h4><div class="shop-dia-grid">'; for (const [id,item] of Object.entries(DIAMOND_SHOP)) { if (id.startsWith('gold')||id.startsWith('enchant')) { html+=`<div class="shop-dia-item" onclick="window._ac.buyDiamondItem('${id}')"><span>${item.emoji}</span><span>${item.name}</span><span>${item.cost}💎</span></div>`; } } html+='</div>'; }
     html+=`</div><button class="sys-close" onclick="document.getElementById('sys-modal').classList.add('hidden')">关闭</button></div>`;
     modal.innerHTML=html; modal.classList.remove('hidden');
   }
   function selectEquipTarget(equipId) { const e=EQUIPMENT[equipId]; if(!e) return; const bk=Object.keys(state.board); if (bk.length===0) { toast('棋盘上无单位！'); return; } const modal=document.getElementById('sys-modal'); let html=`<div class="sys-modal-content"><h3>装备→${e.emoji}${e.name}</h3>`; for (const key of bk) { const u=state.board[key]; const d=UNITS[u.id]; const eq=state.equipped[key]||{}; const cu=eq[e.slot]; html+=`<div class="equip-target" onclick="window._ac.equipItem('${key}','${equipId}')">${d.emoji}${d.name}${'★'.repeat(u.star)} ${cu?`(换:${EQUIPMENT[cu].name})`:'(空)'}</div>`; } html+=`<button class="sys-close" onclick="window._ac.showSystems('equip')">返回</button></div>`; modal.innerHTML=html; }
   function equipSlot(unitKey, slot) { const cs=state.inventory.filter(eId=>EQUIPMENT[eId].slot===slot); if (cs.length===0) { toast(`无${EQUIP_SLOTS_NAME[slot]}！`); return; } const modal=document.getElementById('sys-modal'); let html=`<div class="sys-modal-content"><h3>选${EQUIP_SLOTS_NAME[slot]}</h3>`; for (const eId of cs) { const e=EQUIPMENT[eId]; html+=`<div class="equip-target" onclick="window._ac.equipItem('${unitKey}','${eId}')">${e.emoji}${e.name} ${Object.entries(e.stats).map(([k,v])=>`${k}+${v}`).join(' ')}</div>`; } html+=`<button class="sys-close" onclick="window._ac.showSystems('equip')">返回</button></div>`; modal.innerHTML=html; }
   function init() { if (!loadState()) { state=defaultState(); refreshShop(); saveState(); } render(); }
-  window._ac = { buyUnit, buyXP, toggleLock, startBattle, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, mergeGems, unlockPet, unlockWing };
+
+  // === v5 新增函数 ===
+  function enhanceUnit(unitKey) {
+    const u = state.board[unitKey]; if (!u) { toast('单位不存在！'); return; }
+    const lv = state.enhance[unitKey] || 0;
+    if (lv >= ENHANCE_MAX) { toast('已满级+'+ENHANCE_MAX); return; }
+    const cost = ENHANCE_COSTS[lv];
+    if (state.gold < cost) { toast('💰金币不足！需要'+cost); return; }
+    state.gold -= cost;
+    state.enhance[unitKey] = lv + 1;
+    toast(`${UNITS[u.id].name} 强化至+${lv+1}！`, '⬆️');
+    sfx.discover();
+    saveState(); render(); showSystems('enhance');
+  }
+  function enchantUnit(unitKey) {
+    const u = state.board[unitKey]; if (!u) { toast('单位不存在！'); return; }
+    if ((state.enchantScrolls||0) < 1) { toast('需要附魔卷轴！'); return; }
+    if (state.gold < ENCHANT_COST) { toast('💰金币不足！'); return; }
+    state.gold -= ENCHANT_COST;
+    state.enchantScrolls -= 1;
+    const enchKeys = Object.keys(ENCHANTS).filter(k => k !== 'none');
+    const pick = enchKeys[Math.floor(Math.random()*enchKeys.length)];
+    state.enchant[unitKey] = pick;
+    toast(`${UNITS[u.id].name} 附魔${ENCHANTS[pick].emoji}${ENCHANTS[pick].name}！`, '✨');
+    sfx.discover();
+    saveState(); render(); showSystems('enchant');
+  }
+  function unlockMount(mountId) {
+    if (state.mountUnlocked.includes(mountId)) { state.mount = mountId; saveState(); render(); showSystems('mount'); return; }
+    const m = MOUNTS[mountId]; if (!m) return;
+    if (state.gold < m.cost) { toast('💰金币不足！'); return; }
+    state.gold -= m.cost; state.mountUnlocked.push(mountId); state.mount = mountId;
+    toast(`解锁${m.emoji} ${m.name}！${m.skill.desc}`, '🐴');
+    saveState(); render(); showSystems('mount');
+  }
+  function buyDiamondUnit(unitId) {
+    const def = DIAMOND_SHOP.units[unitId]; if (!def) return;
+    if ((state.diamonds||0) < def.cost) { toast('💎钻石不足！'); return; }
+    state.diamonds -= def.cost;
+    // 把神话单位加入备战席
+    state.bench.push({id:unitId, star:1, tier:def.tier});
+    // 加入 UNITS 如果不存在
+    if (!UNITS[unitId]) { UNITS[unitId] = {name:def.name, emoji:def.emoji, cost:def.cost, race:def.race, job:def.job, base:def.base, skill:def.skill}; }
+    toast(`获得${def.emoji} ${def.name}！(${def.tier==='myth'?'神话':'传说'})`, '💎');
+    sfx.discover();
+    saveState(); render(); showSystems('shop');
+  }
+  function buyDiamondEquip(equipId) {
+    const def = DIAMOND_SHOP.equipment[equipId]; if (!def) return;
+    if ((state.diamonds||0) < def.cost) { toast('💎钻石不足！'); return; }
+    state.diamonds -= def.cost;
+    // 加入 EQUIPMENT 如果不存在
+    if (!EQUIPMENT[equipId]) { EQUIPMENT[equipId] = {name:def.name, slot:def.slot, rarity:def.rarity, stats:def.stats, emoji:def.emoji}; }
+    state.inventory.push(equipId);
+    toast(`获得${def.emoji} ${def.name}！`, '💎');
+    sfx.discover();
+    saveState(); render(); showSystems('shop');
+  }
+  function buyDiamondItem(itemId) {
+    const item = DIAMOND_SHOP[itemId]; if (!item) return;
+    if ((state.diamonds||0) < item.cost) { toast('💎钻石不足！'); return; }
+    state.diamonds -= item.cost;
+    if (item.type === 'gold') { state.gold += item.val; toast(`+${item.val}💰`, '💰'); }
+    else if (item.type === 'enchant_scroll') { state.enchantScrolls = (state.enchantScrolls||0) + 1; toast(`+1附魔卷轴`, '📜'); }
+    saveState(); render(); showSystems('shop');
+  }
+
+  window._ac = { buyUnit, buyXP, toggleLock, startBattle, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
   document.addEventListener('DOMContentLoaded', init);
 })();
