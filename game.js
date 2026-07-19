@@ -187,18 +187,26 @@
     return active;
   }
 
-  // === 战斗系统 ===
+  // === 战斗系统（逐帧动画版）===
   function calcStats(unit) {
     const def = UNITS[unit.id];
     const mult = STAR_MULT[unit.star] || 1;
-    let hp = Math.round(def.base.hp * mult);
-    let atk = Math.round(def.base.atk * mult);
-    let armor = def.base.armor;
-    let mr = def.base.mr;
-    let range = def.base.range;
-    let atkSpd = def.base.atkSpd;
-    // 羁绊加成在战斗时单独算
-    return {hp, maxHp:hp, atk, armor, mr, range, atkSpd, skill: def.skill, race: def.race, job: def.job, name: def.name, emoji: def.emoji};
+    return {
+      hp: Math.round(def.base.hp * mult), maxHp: Math.round(def.base.hp * mult),
+      atk: Math.round(def.base.atk * mult), armor: def.base.armor, mr: def.base.mr,
+      range: def.base.range, atkSpd: def.base.atkSpd,
+      skill: def.skill, race: def.race, job: def.job,
+      name: def.name, emoji: def.emoji, star: unit.star,
+    };
+  }
+
+  function makeCombatant(u, team, x, y) {
+    const c = calcStats(u);
+    c.team = team; c.x = x; c.y = y;
+    c.atkCd = 0; c.dead = false; c.target = null;
+    c.moveProgress = 0; c.attacking = false; c.attackFlash = 0;
+    c.skillFlash = 0; c.hitFlash = 0;
+    return c;
   }
 
   function applySynergyBuffs(combatants, synergies) {
@@ -215,122 +223,214 @@
           case 'atkPct': c.atk = Math.round(c.atk * (1 + buff.val)); break;
           case 'skillDmg': c.skillMult = (c.skillMult||1) + buff.val; break;
         }
-      }
-      // 全局 buff（不限种族职业的）
-      if (buff.type === 'armorReflect' || buff.type === 'hpRegen' || buff.type === 'mrSlow' || buff.type === 'atkBurn' || buff.type === 'atkRange' || buff.type === 'armorHp' || buff.type === 'armorHp2' || buff.type === 'skillMrReduce') {
-        for (const c of combatants) {
-          if (buff.type === 'hpRegen') c.regen = (c.regen||0) + 0.01 * c.maxHp;
-          if (buff.type === 'atkBurn') c.burnOnHit = true;
-          if (buff.type === 'atkRange' && c.race === s.key) c.range += 1;
-          if (buff.type === 'armorHp2' || buff.type === 'armorHp') { c.maxHp += buff.val; c.hp += buff.val; }
-        }
+        if (buff.type === 'hpRegen') c.regen = (c.regen||0) + 0.01 * c.maxHp;
+        if (buff.type === 'atkBurn') c.burnOnHit = true;
+        if (buff.type === 'atkRange' && c.race === s.key) c.range += 1;
+        if (buff.type === 'hpArmor2') { c.maxHp += buff.val; c.hp += buff.val; }
       }
     }
   }
 
-  // 战斗模拟（回合制tick）
-  function simulateBattle(playerBoard, enemyUnits) {
+  // 战斗状态
+  let battle = null;
+
+  function startBattleAnim(playerBoard, enemyUnits, callback) {
     const synergies = getSynergies(playerBoard);
     const player = [];
     for (const [key, u] of Object.entries(playerBoard)) {
-      const c = calcStats(u);
-      c.team = 'player';
-      const [x,y] = key.split(',').map(Number);
-      c.x = x; c.y = y;
-      player.push(c);
+      const [x, y] = key.split(',').map(Number);
+      player.push(makeCombatant(u, 'player', x, y));
     }
     const enemy = [];
     for (const e of enemyUnits) {
-      const c = calcStats(e);
-      c.team = 'enemy';
-      c.x = e.pos[0]; c.y = e.pos[1] + 4; // 敌方在下半场
-      enemy.push(c);
+      enemy.push(makeCombatant(e, 'enemy', e.pos[0], e.pos[1] + 4));
     }
     applySynergyBuffs(player, synergies);
 
     const all = [...player, ...enemy];
-    let tick = 0;
-    const maxTick = 600; // 10秒@60fps 简化
 
-    while (tick < maxTick) {
-      for (const u of all) {
-        if (u.hp <= 0) continue;
-        // 找最近敌人
-        let target = null, minDist = Infinity;
-        for (const t of all) {
-          if (t.team === u.team || t.hp <= 0) continue;
-          const d = Math.abs(t.x - u.x) + Math.abs(t.y - u.y);
-          if (d < minDist) { minDist = d; target = t; }
+    // 显示覆层
+    const overlay = document.getElementById('battle-overlay');
+    const canvas = document.getElementById('battle-canvas');
+    const info = document.getElementById('battle-info');
+    overlay.classList.remove('hidden');
+
+    const CELL = Math.floor(Math.min(canvas.offsetWidth / 8, canvas.offsetHeight / 8));
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    const cw = canvas.width / 8, ch = canvas.height / 8;
+
+    battle = { all, player, enemy, tick: 0, maxTick: 1200, done: false, callback, cw, ch };
+
+    function frame() {
+      if (!battle || battle.done) return;
+      battle.tick++;
+      // 逻辑更新（每帧）
+      for (const u of battle.all) {
+        if (u.hp <= 0) { u.dead = true; continue; }
+        if (u.hitFlash > 0) u.hitFlash--;
+        if (u.attackFlash > 0) u.attackFlash--;
+        if (u.skillFlash > 0) u.skillFlash--;
+
+        // 回血
+        if (u.regen && battle.tick % 60 === 0) u.hp = Math.min(u.maxHp, u.hp + u.regen);
+
+        // 找目标
+        if (!u.target || u.target.hp <= 0) {
+          let minDist = Infinity;
+          for (const t of battle.all) {
+            if (t.team === u.team || t.hp <= 0) continue;
+            const d = Math.abs(t.x - u.x) + Math.abs(t.y - u.y);
+            if (d < minDist) { minDist = d; u.target = t; }
+          }
         }
-        if (!target) continue;
+        if (!u.target) continue;
 
-        const dist = Math.max(Math.abs(target.x - u.x), Math.abs(target.y - u.y));
+        const dist = Math.max(Math.abs(u.target.x - u.x), Math.abs(u.target.y - u.y));
         if (dist <= u.range) {
           // 攻击
-          if (tick % Math.ceil(60 / u.atkSpd) === 0) {
-            let dmg = Math.max(1, u.atk - Math.round(target.armor * 0.5));
-            target.hp -= dmg;
-            // 技能触发
+          u.atkCd--;
+          if (u.atkCd <= 0) {
+            u.atkCd = Math.ceil(60 / u.atkSpd);
+            u.attackFlash = 8;
+            let dmg = Math.max(1, u.atk - Math.round(u.target.armor * 0.5));
+            u.target.hp -= dmg;
+            u.target.hitFlash = 8;
+            // 技能
             if (u.skill && Math.random() < 0.15) {
-              applySkillEffect(u, target, all);
+              u.skillFlash = 15;
+              applySkillEffect(u, u.target, battle.all);
             }
           }
         } else {
-          // 移动
-          const dx = Math.sign(target.x - u.x);
-          const dy = Math.sign(target.y - u.y);
-          if (Math.abs(target.x - u.x) > Math.abs(target.y - u.y)) u.x += dx;
-          else u.y += dy;
+          // 移动（平滑）
+          const dx = Math.sign(u.target.x - u.x);
+          const dy = Math.sign(u.target.y - u.y);
+          if (Math.abs(u.target.x - u.x) > Math.abs(u.target.y - u.y)) u.x += dx * 0.15;
+          else u.y += dy * 0.15;
         }
       }
-      // 清理死亡
-      // 检查胜负
-      const pAlive = player.filter(u => u.hp > 0).length;
-      const eAlive = enemy.filter(u => u.hp > 0).length;
-      if (pAlive === 0 || eAlive === 0) break;
-      tick++;
+
+      // 胜负判定
+      const pAlive = battle.player.filter(u => u.hp > 0).length;
+      const eAlive = battle.enemy.filter(u => u.hp > 0).length;
+
+      // 绘制
+      drawBattle(canvas, battle);
+
+      // 信息
+      info.innerHTML = `<span class="battle-tick">⏱ ${(battle.tick/60).toFixed(1)}s</span> <span class="battle-alive">我方 ${pAlive} vs 敌方 ${eAlive}</span>`;
+
+      if (pAlive === 0 || eAlive === 0 || battle.tick >= battle.maxTick) {
+        battle.done = true;
+        const won = eAlive === 0 && pAlive > 0;
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          callback({ won, pAlive, eAlive, ticks: battle.tick, synergies });
+          battle = null;
+        }, 800);
+        return;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function drawBattle(canvas, b) {
+    const ctx = canvas.getContext('2d');
+    const cw = b.cw, ch = b.ch;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 背景棋盘格
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        ctx.fillStyle = y >= 4 ? 'rgba(63,185,80,0.06)' : 'rgba(248,81,73,0.06)';
+        ctx.fillRect(x*cw, y*ch, cw, ch);
+        ctx.strokeStyle = '#30363d';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x*cw, y*ch, cw, ch);
+      }
     }
 
-    const pAlive = player.filter(u => u.hp > 0).length;
-    const eAlive = enemy.filter(u => u.hp > 0).length;
-    const won = eAlive === 0 && pAlive > 0;
-    return { won, pAlive, eAlive, ticks: tick, synergies };
+    // 绘制单位
+    for (const u of b.all) {
+      if (u.dead) continue;
+      const px = u.x * cw + cw/2;
+      const py = u.y * ch + ch/2;
+      const r = Math.min(cw, ch) * 0.32;
+
+      // 光环
+      if (u.skillFlash > 0) {
+        ctx.fillStyle = `rgba(255,255,0,${u.skillFlash/15*0.3})`;
+        ctx.beginPath(); ctx.arc(px, py, r*2, 0, Math.PI*2); ctx.fill();
+      }
+
+      // 圆形底
+      ctx.fillStyle = u.team === 'player' ? 'rgba(63,185,80,0.2)' : 'rgba(248,81,73,0.2)';
+      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = u.team === 'player' ? '#3fb950' : '#f85149';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // emoji
+      ctx.font = `${r*1.3}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(u.emoji, px, py);
+
+      // 星级
+      if (u.star > 1) {
+        ctx.font = '7px sans-serif';
+        ctx.fillStyle = '#c8a04a';
+        ctx.fillText('★'.repeat(u.star), px, py + r + 3);
+      }
+
+      // 血条
+      const barW = r * 2, barH = 3;
+      const barY = py - r - 6;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(px - barW/2, barY, barW, barH);
+      const hpPct = Math.max(0, u.hp / u.maxHp);
+      ctx.fillStyle = hpPct > 0.5 ? '#3fb950' : hpPct > 0.2 ? '#f0c050' : '#f85149';
+      ctx.fillRect(px - barW/2, barY, barW * hpPct, barH);
+
+      // 受击闪烁
+      if (u.hitFlash > 0) {
+        ctx.fillStyle = `rgba(255,0,0,${u.hitFlash/8*0.3})`;
+        ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI*2); ctx.fill();
+      }
+
+      // 攻击线
+      if (u.attackFlash > 0 && u.target && !u.target.dead) {
+        const tx = u.target.x * cw + cw/2;
+        const ty = u.target.y * ch + ch/2;
+        ctx.strokeStyle = `rgba(255,255,0,${u.attackFlash/8})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(tx, ty); ctx.stroke();
+      }
+    }
   }
 
   function applySkillEffect(attacker, target, all) {
     const s = attacker.skill;
     const mult = attacker.skillMult || 1;
     switch(s.type) {
-      case 'burn':
-        target.hp -= Math.round(attacker.atk * s.val * mult);
-        break;
+      case 'burn': target.hp -= Math.round(attacker.atk * s.val * mult); break;
       case 'aoe': case 'aoeSlow': case 'aoeBurn': case 'aoeStun':
         for (const t of all) {
           if (t.team === attacker.team || t.hp <= 0) continue;
           const d = Math.abs(t.x - attacker.x) + Math.abs(t.y - attacker.y);
-          if (d <= 3) t.hp -= Math.round(attacker.atk * s.val * mult);
+          if (d <= 3) { t.hp -= Math.round(attacker.atk * s.val * mult); t.hitFlash = 8; }
         }
         break;
-      case 'freeze': case 'petrify':
-        target.stunned = (target.stunned||0) + 60; // 1秒
-        break;
+      case 'freeze': case 'petrify': target.stunned = (target.stunned||0) + 60; break;
       case 'heal':
-        for (const t of all) {
-          if (t.team === attacker.team && t.hp > 0) t.hp = Math.min(t.maxHp, t.hp + s.val);
-        }
+        for (const t of all) { if (t.team === attacker.team && t.hp > 0) t.hp = Math.min(t.maxHp, t.hp + s.val); }
         break;
-      case 'shield':
-        attacker.shield = s.val;
-        break;
-      case 'revive':
-        if (!attacker.revived) attacker.revived = true;
-        break;
-      case 'crit':
-        target.hp -= Math.round(attacker.atk * s.val * mult);
-        break;
-      case 'firstDouble':
-        if (!attacker.firstUsed) { target.hp -= attacker.atk; attacker.firstUsed = true; }
-        break;
+      case 'shield': attacker.shield = s.val; break;
+      case 'revive': if (!attacker.revived) attacker.revived = true; break;
+      case 'crit': target.hp -= Math.round(attacker.atk * s.val * mult); break;
+      case 'firstDouble': if (!attacker.firstUsed) { target.hp -= attacker.atk; attacker.firstUsed = true; } break;
     }
   }
 
@@ -340,37 +440,37 @@
     const level = LEVELS[state.level - 1];
     if (!level) { toast('已通关全部关卡！'); return; }
 
-    const result = simulateBattle(state.board, level.enemies);
-    state.battleLog.unshift({
-      wave: level.wave, won: result.won,
-      pAlive: result.pAlive, eAlive: result.eAlive
-    });
+    // 禁用战斗按钮防止重复点击
+    const btn = document.getElementById('battle-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '战斗中...'; }
 
-    if (result.won) {
-      state.winStreak++; state.loseStreak = 0;
-      const streakBonus = STREAK_GOLD[Math.min(state.winStreak, 9)] || 3;
-      const interest = Math.min(INTEREST_MAX, Math.floor(state.gold / INTEREST_PER));
-      const reward = level.gold + streakBonus + interest;
-      state.gold += reward;
-      toast(`胜利！+${reward}金（基础${level.gold}+连胜${streakBonus}+利息${interest}）`, '🏆');
-      sfx.success();
-      state.level++;
-      if (state.level > LEVELS.length) {
-        sfx.win();
-        showWin();
+    // 启动动画战斗
+    startBattleAnim(state.board, level.enemies, (result) => {
+      state.battleLog.unshift({ wave: level.wave, won: result.won, pAlive: result.pAlive, eAlive: result.eAlive });
+
+      if (result.won) {
+        state.winStreak++; state.loseStreak = 0;
+        const streakBonus = STREAK_GOLD[Math.min(state.winStreak, 9)] || 3;
+        const interest = Math.min(INTEREST_MAX, Math.floor(state.gold / INTEREST_PER));
+        const reward = level.gold + streakBonus + interest;
+        state.gold += reward;
+        toast(`胜利！+${reward}金（基础${level.gold}+连胜${streakBonus}+利息${interest}）`, '🏆');
+        sfx.success();
+        state.level++;
+        if (state.level > LEVELS.length) { sfx.win(); showWin(); }
+      } else {
+        state.loseStreak++; state.winStreak = 0;
+        const lossBonus = STREAK_GOLD[Math.min(state.loseStreak, 9)] || 0;
+        const interest = Math.min(INTEREST_MAX, Math.floor(state.gold / INTEREST_PER));
+        state.gold += 5 + lossBonus + interest;
+        toast(`失败...+${5+lossBonus+interest}金（保留单位再战）`, '💀');
+        sfx.fail();
       }
-    } else {
-      state.loseStreak++; state.winStreak = 0;
-      const lossBonus = STREAK_GOLD[Math.min(state.loseStreak, 9)] || 0;
-      const interest = Math.min(INTEREST_MAX, Math.floor(state.gold / INTEREST_PER));
-      state.gold += 5 + lossBonus + interest;
-      toast(`失败...+${5+lossBonus+interest}金（保留单位再战）`, '💀');
-      sfx.fail();
-    }
 
-    refreshShop();
-    saveState();
-    render();
+      refreshShop();
+      saveState();
+      render();
+    });
   }
 
   // === 音效 ===
