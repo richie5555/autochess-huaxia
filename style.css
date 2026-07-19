@@ -55,9 +55,9 @@ body { font-family: "PingFang SC","Microsoft YaHei",sans-serif; background: var(
 .cell.player-side { background: rgba(63,185,80,0.05); }
 .cell.enemy-side { background: rgba(248,81,73,0.05); }
 .cell.occupied { background: var(--bg-light); border-color: var(--accent); }
-.unit-emoji { font-size: 14px; line-height: 1; }
-.unit-stars { font-size: 6px; color: var(--accent); line-height: 1; margin-top: 1px; }
-.unit-cost { font-size: 7px; color: var(--gold); }
+.unit-emoji { font-size: 18px; line-height: 1; }
+.unit-stars { font-size: 8px; color: var(--accent); line-height: 1; margin-top: 1px; }
+.unit-cost { font-size: 8px; color: var(--gold); }
 
 /* === 羁绊 === */
 #synergies { display: flex; align-items: center; padding: 3px 10px; background: var(--bg-mid); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 6px; overflow-x: auto; min-height: 22px; }
