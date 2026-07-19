@@ -61,16 +61,16 @@ const LEVELS = [
   {wave:4, gold:10, enemies:[{id:"shuishen",star:1,pos:[3,1]},{id:"huolong",star:1,pos:[4,1]},{id:"mushuwang",star:1,pos:[3,0]},{id:"jinbiashi",star:1,pos:[4,0]}]},
   {wave:5, gold:12, enemies:[{id:"hailongwang",star:1,pos:[3,1]},{id:"yanlong",star:1,pos:[4,0]},{id:"shushen",star:1,pos:[3,0]},{id:"jiangshi",star:1,pos:[4,1]},{id:"jinshen",star:1,pos:[2,0]}]},
   {wave:6, gold:14, enemies:[{id:"xuanwu",star:1,pos:[3,0]},{id:"zhuque",star:1,pos:[4,1]},{id:"qinglong",star:1,pos:[3,1]},{id:"baihu",star:1,pos:[4,0]},{id:"kunlunling",star:1,pos:[2,1]}]},
-  {wave:7, gold:16, enemies:[{id:"xuanwu",star:2,pos:[3,0]},{id:"zhuque",star:2,pos:[4,1]},{id:"qinglong",star:2,pos:[3,1]},{id:"baihu",star:2,pos:[4,0]}]},
-  {wave:8, gold:18, enemies:[{id:"longwang",star:1,pos:[3,1]},{id:"fenghuang",star:1,pos:[4,1]},{id:"xuanwu",star:2,pos:[3,0]},{id:"zhuque",star:2,pos:[4,0]},{id:"qinglong",star:2,pos:[2,1]}]},
-  {wave:9, gold:20, enemies:[{id:"longwang",star:2,pos:[3,1]},{id:"fenghuang",star:2,pos:[4,1]},{id:"baihu",star:2,pos:[3,0]},{id:"qinglong",star:2,pos:[4,0]},{id:"kunlunling",star:2,pos:[2,1]},{id:"zhuque",star:2,pos:[5,0]}]},
-  {wave:10, gold:25, enemies:[{id:"longwang",star:3,pos:[3,1]},{id:"fenghuang",star:3,pos:[4,1]},{id:"xuanwu",star:3,pos:[3,0]},{id:"zhuque",star:3,pos:[4,0]},{id:"qinglong",star:3,pos:[2,1]},{id:"baihu",star:3,pos:[5,0]},{id:"kunlunling",star:3,pos:[3,3]}]},
+  {wave:7, gold:16, enemies:[{id:"xuanwu",star:1,pos:[3,0]},{id:"zhuque",star:2,pos:[4,1]},{id:"qinglong",star:1,pos:[3,1]},{id:"baihu",star:1,pos:[4,0]}]},
+  {wave:8, gold:18, enemies:[{id:"longwang",star:1,pos:[3,1]},{id:"fenghuang",star:1,pos:[4,1]},{id:"xuanwu",star:1,pos:[3,0]},{id:"zhuque",star:1,pos:[4,0]},{id:"qinglong",star:1,pos:[2,1]}]},
+  {wave:9, gold:20, enemies:[{id:"longwang",star:1,pos:[3,1]},{id:"fenghuang",star:1,pos:[4,1]},{id:"baihu",star:1,pos:[3,0]},{id:"qinglong",star:1,pos:[4,0]},{id:"kunlunling",star:1,pos:[2,1]},{id:"zhuque",star:1,pos:[5,0]}]},
+  {wave:10, gold:25, enemies:[{id:"longwang",star:2,pos:[3,1]},{id:"fenghuang",star:2,pos:[4,1]},{id:"xuanwu",star:2,pos:[3,0]},{id:"zhuque",star:2,pos:[4,0]},{id:"qinglong",star:2,pos:[2,1]},{id:"baihu",star:2,pos:[5,0]},{id:"kunlunling",star:2,pos:[3,3]}]},
 ];
 
 // 升星倍率
 const STAR_MULT = {1:1, 2:1.8, 3:3.0};
 // 合成需要数量
-const MERGE_NEED = 3;
+const MERGE_NEED = 2;
 // 商店每回合刷新数
 const SHOP_SIZE = 5;
 // 棋盘大小
