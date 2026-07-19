@@ -424,7 +424,6 @@
     const el = document.getElementById('board');
     if (!el) return;
     let html = '';
-    // 棋盘 8x8 (玩家下半 4行，敌方上半 4行)
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < BOARD_W; x++) {
         const key = `${x},${y}`;
@@ -438,7 +437,6 @@
         }
         html += `</div>`;
       }
-      html += '<br>';
     }
     el.innerHTML = html;
 
