@@ -125,6 +125,21 @@ body { font-family: "PingFang SC","Microsoft YaHei",sans-serif; background: var(
   .shop-unit .unit-emoji { font-size: 20px; }
 }
 
+/* === XP 条 === */
+.xp-bar { display: inline-block; width: 40px; height: 8px; background: #21262d; border-radius: 4px; overflow: hidden; vertical-align: middle; }
+.xp-fill { display: block; height: 100%; background: #4a9eff; border-radius: 4px; transition: width 0.3s; }
+
+/* === 禁用按钮 === */
+.action-btn.disabled { opacity: 0.4; }
+.action-btn.disabled:active { transform: none; }
+
+/* === 商店空槽 === */
+.shop-unit.empty { display: flex; align-items: center; justify-content: center; border: 2px dashed var(--border) !important; opacity: 0.3; }
+.shop-unit.empty .unit-emoji { font-size: 14px; color: var(--text-dim); }
+
+/* === 羁绊未激活 === */
+.syn-tag.inactive { opacity: 0.4; background: rgba(125,133,144,0.15) !important; color: var(--text-dim) !important; }
+
 /* === 战斗覆层 === */
 #battle-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
