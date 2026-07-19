@@ -15,6 +15,7 @@
     <div id="synergies"></div>
     <div id="bench"></div>
     <div id="shop"></div>
+    <div id="equip-bar"></div>
 
     <!-- 战斗覆层 -->
     <div id="battle-overlay" class="hidden">
@@ -22,13 +23,11 @@
       <div id="battle-info"></div>
     </div>
 
-    <div id="win-modal" class="modal hidden">
-      <div class="modal-content">
-        <div class="win-title">🏆 通关 🏆</div>
-        <p>你击败了第10波，天下无敌！</p>
-        <button onclick="location.reload()">再玩一次</button>
-      </div>
-    </div>
+    <!-- 系统面板（装备/宝石/宠物/翅膀）-->
+    <div id="sys-modal" class="modal hidden"></div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
   </div>
   <script src="data.js"></script>
   <script src="game.js"></script>
