@@ -48,23 +48,23 @@ const RACES = {
 
 // === 职业羁绊 ===
 const JOBS = {
-  zhanshi:{name:"战士",buffs:{3:{desc:"护甲+20",type:"armor",val:20},6:{desc:"护甲+40，生命+300",type:"armorHp",val:40}}},
-  sheshou: {name:"射手",buffs:{3:{desc:"攻击+20%",type:"atkPct",val:0.2},6:{desc:"攻击+40%，射程+1",type:"atkRange",val:0.4}}},
-  fashi:   {name:"法师",buffs:{3:{desc:"技能伤害+30%",type:"skillDmg",val:0.3},6:{desc:"技能伤害+60%，减敌方魔抗20",type:"skillMrReduce",val:0.6}}},
+  zhanshi:{name:"战士",buffs:{2:{desc:"护甲+15",type:"armor",val:15},4:{desc:"护甲+30，生命+200",type:"armorHp",val:30}}},
+  sheshou: {name:"射手",buffs:{2:{desc:"攻击+15%",type:"atkPct",val:0.15},4:{desc:"攻击+30%，射程+1",type:"atkRange",val:0.3}}},
+  fashi:   {name:"法师",buffs:{2:{desc:"技能伤害+25%",type:"skillDmg",val:0.25},4:{desc:"技能伤害+50%，减敌方魔抗20",type:"skillMrReduce",val:0.5}}},
 };
 
 // === PVE 关卡 ===
 const LEVELS = [
-  {wave:1, gold:5, enemies:[{id:"bingjiang",star:1,pos:[3,0]},{id:"bingjiang",star:1,pos:[4,0]}]},
-  {wave:2, gold:6, enemies:[{id:"liehuoshou",star:1,pos:[3,0]},{id:"liehuoshou",star:1,pos:[4,0]},{id:"mujingling",star:1,pos:[3,1]}]},
-  {wave:3, gold:7, enemies:[{id:"jinweishi",star:1,pos:[3,0]},{id:"jinweishi",star:1,pos:[4,0]},{id:"tuwushi",star:1,pos:[3,1]},{id:"tuwushi",star:1,pos:[4,1]}]},
-  {wave:4, gold:8, enemies:[{id:"shuishen",star:1,pos:[3,1]},{id:"huolong",star:1,pos:[4,1]},{id:"mushuwang",star:1,pos:[3,0]},{id:"jinbiashi",star:1,pos:[4,0]}]},
-  {wave:5, gold:10, enemies:[{id:"hailongwang",star:1,pos:[3,1]},{id:"yanlong",star:1,pos:[4,0]},{id:"shushen",star:1,pos:[3,0]},{id:"jiangshi",star:1,pos:[4,1]},{id:"jinshen",star:1,pos:[2,0]}]},
-  {wave:6, gold:12, enemies:[{id:"xuanwu",star:1,pos:[3,0]},{id:"zhuque",star:1,pos:[4,1]},{id:"qinglong",star:1,pos:[3,1]},{id:"baihu",star:1,pos:[4,0]},{id:"kunlunling",star:1,pos:[2,1]}]},
-  {wave:7, gold:14, enemies:[{id:"xuanwu",star:2,pos:[3,0]},{id:"zhuque",star:2,pos:[4,1]},{id:"qinglong",star:2,pos:[3,1]},{id:"baihu",star:2,pos:[4,0]}]},
-  {wave:8, gold:16, enemies:[{id:"longwang",star:1,pos:[3,1]},{id:"fenghuang",star:1,pos:[4,1]},{id:"xuanwu",star:2,pos:[3,0]},{id:"zhuque",star:2,pos:[4,0]},{id:"qinglong",star:2,pos:[2,1]}]},
-  {wave:9, gold:18, enemies:[{id:"longwang",star:2,pos:[3,1]},{id:"fenghuang",star:2,pos:[4,1]},{id:"baihu",star:2,pos:[3,0]},{id:"qinglong",star:2,pos:[4,0]},{id:"kunlunling",star:2,pos:[2,1]},{id:"zhuque",star:2,pos:[5,0]}]},
-  {wave:10, gold:20, enemies:[{id:"longwang",star:3,pos:[3,1]},{id:"fenghuang",star:3,pos:[4,1]},{id:"xuanwu",star:3,pos:[3,0]},{id:"zhuque",star:3,pos:[4,0]},{id:"qinglong",star:3,pos:[2,1]},{id:"baihu",star:3,pos:[5,0]},{id:"kunlunling",star:3,pos:[3,3]}]},
+  {wave:1, gold:6, enemies:[{id:"bingjiang",star:1,pos:[3,0]},{id:"bingjiang",star:1,pos:[4,0]}]},
+  {wave:2, gold:8, enemies:[{id:"liehuoshou",star:1,pos:[3,0]},{id:"liehuoshou",star:1,pos:[4,0]},{id:"mujingling",star:1,pos:[3,1]}]},
+  {wave:3, gold:9, enemies:[{id:"jinweishi",star:1,pos:[3,0]},{id:"jinweishi",star:1,pos:[4,0]},{id:"tuwushi",star:1,pos:[3,1]},{id:"tuwushi",star:1,pos:[4,1]}]},
+  {wave:4, gold:10, enemies:[{id:"shuishen",star:1,pos:[3,1]},{id:"huolong",star:1,pos:[4,1]},{id:"mushuwang",star:1,pos:[3,0]},{id:"jinbiashi",star:1,pos:[4,0]}]},
+  {wave:5, gold:12, enemies:[{id:"hailongwang",star:1,pos:[3,1]},{id:"yanlong",star:1,pos:[4,0]},{id:"shushen",star:1,pos:[3,0]},{id:"jiangshi",star:1,pos:[4,1]},{id:"jinshen",star:1,pos:[2,0]}]},
+  {wave:6, gold:14, enemies:[{id:"xuanwu",star:1,pos:[3,0]},{id:"zhuque",star:1,pos:[4,1]},{id:"qinglong",star:1,pos:[3,1]},{id:"baihu",star:1,pos:[4,0]},{id:"kunlunling",star:1,pos:[2,1]}]},
+  {wave:7, gold:16, enemies:[{id:"xuanwu",star:2,pos:[3,0]},{id:"zhuque",star:2,pos:[4,1]},{id:"qinglong",star:2,pos:[3,1]},{id:"baihu",star:2,pos:[4,0]}]},
+  {wave:8, gold:18, enemies:[{id:"longwang",star:1,pos:[3,1]},{id:"fenghuang",star:1,pos:[4,1]},{id:"xuanwu",star:2,pos:[3,0]},{id:"zhuque",star:2,pos:[4,0]},{id:"qinglong",star:2,pos:[2,1]}]},
+  {wave:9, gold:20, enemies:[{id:"longwang",star:2,pos:[3,1]},{id:"fenghuang",star:2,pos:[4,1]},{id:"baihu",star:2,pos:[3,0]},{id:"qinglong",star:2,pos:[4,0]},{id:"kunlunling",star:2,pos:[2,1]},{id:"zhuque",star:2,pos:[5,0]}]},
+  {wave:10, gold:25, enemies:[{id:"longwang",star:3,pos:[3,1]},{id:"fenghuang",star:3,pos:[4,1]},{id:"xuanwu",star:3,pos:[3,0]},{id:"zhuque",star:3,pos:[4,0]},{id:"qinglong",star:3,pos:[2,1]},{id:"baihu",star:3,pos:[5,0]},{id:"kunlunling",star:3,pos:[3,3]}]},
 ];
 
 // 升星倍率
@@ -78,14 +78,14 @@ const BOARD_W = 8, BOARD_H = 4; // 玩家半场 8x4
 // 备战席数量
 const BENCH_SIZE = 9;
 // 初始金币
-const START_GOLD = 8;
+const START_GOLD = 10;
 // 利息每5金1利息，上限5
-const INTEREST_PER = 5, INTEREST_MAX = 5;
+const INTEREST_PER = 3, INTEREST_MAX = 8;
 // 连胜/连败奖励
-const STREAK_GOLD = {1:0, 2:1, 3:2, 4:2, 5:3, 6:3, 7:4, 8:4, 9:5};
+const STREAK_GOLD = {1:1, 2:1, 3:2, 4:3, 5:3, 6:4, 7:4, 8:5, 9:5};
 // 买经验费用（每次2金，4次升1级）
-const XP_COST = 2;
-const XP_PER_LEVEL = 4;
+const XP_COST = 1;
+const XP_PER_LEVEL = 3;
 const MAX_PLAYER_LEVEL = 8;
 
 // 商店概率（按费用）[1费,2费,3费,4费,5费]
