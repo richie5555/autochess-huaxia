@@ -209,7 +209,7 @@
     }
     const enemy = [];
     for (const e of enemyUnits) {
-      enemy.push(makeCombatant(e, 'enemy', e.pos[0], e.pos[1] + 4));
+      enemy.push(makeCombatant(e, 'enemy', e.pos[0], e.pos[1]));
     }
     applySynergyBuffs(player, synergies);
     applySynergyBuffs(enemy, getSynergiesFromUnits(enemyUnits));
