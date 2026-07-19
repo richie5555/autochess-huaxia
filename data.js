@@ -207,3 +207,77 @@ function getLevel(wave) {
 }
 
 // if (typeof module !== 'undefined') module.exports = { UNITS, EQUIPMENT, GEM_TYPES, PETS, WINGS, getLevel };
+
+// === v5 新增系统 ===
+
+// --- 强化系统 ---
+const ENHANCE_COSTS = [10, 20, 40, 80, 160, 320, 640, 1280, 2560, 5120]; // +0~+9
+const ENHANCE_BONUS = {0:{hp_pct:0,atk_pct:0}, 1:{hp_pct:0.05,atk_pct:0.05}, 2:{hp_pct:0.10,atk_pct:0.10}, 3:{hp_pct:0.15,atk_pct:0.15}, 4:{hp_pct:0.22,atk_pct:0.22}, 5:{hp_pct:0.30,atk_pct:0.30}, 6:{hp_pct:0.40,atk_pct:0.40}, 7:{hp_pct:0.55,atk_pct:0.55}, 8:{hp_pct:0.75,atk_pct:0.75}, 9:{hp_pct:1.0,atk_pct:1.0}};
+const ENHANCE_MAX = 9;
+
+// --- 附魔系统 ---
+const ENCHANTS = {
+  none: {name:"无",emoji:"",stats:{}},
+  fire: {name:"火焰附魔",emoji:"🔥",stats:{atk_pct:0.10,bonus_burn:5}},
+  ice: {name:"冰霜附魔",emoji:"❄️",stats:{bonus_freeze:0.05,hp:200}},
+  thunder: {name:"雷电附魔",emoji:"⚡",stats:{atkSpd:0.15,bonus_chain:0.1}},
+  earth: {name:"大地附魔",emoji:"🌍",stats:{hp:500,armor:20}},
+  holy: {name:"神圣附魔",emoji:"✨",stats:{hp_pct:0.10,atk_pct:0.10,mr:15}},
+  dark: {name:"暗影附魔",emoji:"🌑",stats:{atk_pct:0.15,crit:0.10}},
+};
+const ENCHANT_COST = 30;
+const ENCHANT_SCROLL_DROP = 0.10; // 10%掉落附魔卷轴
+
+// --- 坐骑系统 ---
+const MOUNTS = {
+  m0: {name:"无坐骑",emoji:"🚶",skill:{type:"none",val:0,desc:"未装备"},cost:0},
+  m1: {name:"白马",emoji:"🐴",skill:{type:"hpBonus",val:0.08,desc:"全队生命+8%"},cost:80},
+  m2: {name:"战狼",emoji:"🐺",skill:{type:"atkBonus",val:0.08,desc:"全队攻击+8%"},cost:150},
+  m3: {name:"赤焰驹",emoji:"🔥",skill:{type:"atkSpd",val:0.10,desc:"全队攻速+10%"},cost:300},
+  m4: {name:"玄冰鹿",emoji:"🦌",skill:{type:"dodge",val:0.08,desc:"闪避+8%"},cost:500},
+  m5: {name:"麒麟",emoji:"🦄",skill:{type:"allBonus",val:0.12,desc:"全队属性+12%"},cost:1000},
+  m6: {name:"神龙",emoji:"🐉",skill:{type:"allBonus",val:0.20,desc:"全队属性+20%"},cost:5000},
+};
+const MOUNT_UNLOCK_WAVE = 7;
+
+// --- 钻石商店系统 ---
+const START_DIAMONDS = 0;
+// Boss波掉落钻石
+const DIAMOND_DROP_CHANCE = 0.3; // 30%
+const DIAMOND_DROP_AMOUNT = 1;
+// 每通关10波送1钻石
+const DIAMOND_PER_10_WAVES = 1;
+
+const DIAMOND_SHOP = {
+  // 神话级物种（只有钻石能买）
+  units: {
+    myth_pangu:    {name:"盘古",emoji:"🔨",cost:1,race:"tu",job:"zhanshi",base:{hp:3000,atk:300,range:1,atkSpd:0.8,armor:80,mr:50},skill:{name:"开天辟地",desc:"首击3倍伤害+全场震慑",type:"firstDouble",val:3.0},tier:"myth"},
+    myth_nuwa:     {name:"女娲",emoji:"🧬",cost:1,race:"tu",job:"fashi",base:{hp:2500,atk:280,range:5,atkSpd:0.85,armor:30,mr:80},skill:{name:"造化万物",desc:"每秒治疗全军5%",type:"heal",val:150},tier:"myth"},
+    myth_houyi:    {name:"后羿",emoji:"🏹",cost:1,race:"jin",job:"sheshou",base:{hp:2000,atk:350,range:6,atkSpd:1.0,armor:20,mr:30},skill:{name:"射日",desc:"攻击穿透+3目标",type:"chain",val:0.6},tier:"myth"},
+    myth_xingtian: {name:"刑天",emoji:"🪓",cost:1,race:"jin",job:"zhanshi",base:{hp:4000,atk:250,range:1,atkSpd:1.0,armor:100,mr:30},skill:{name:"战神",desc:"永不倒下(复活100%×2)",type:"revive",val:1.0},tier:"myth"},
+    // 传说级物种
+    legend_huangdi:{name:"黄帝",emoji:"👑",cost:2,race:"tu",job:"zhanshi",base:{hp:2500,atk:250,range:2,atkSpd:0.9,armor:60,mr:40},skill:{name:"天子之威",desc:"全场AOE+友军护甲+30",type:"ultimate",val:0.6},tier:"legend"},
+    legend_chiyuo: {name:"蚩尤",emoji:"👹",cost:2,race:"huo",job:"zhanshi",base:{hp:2800,atk:280,range:1,atkSpd:1.1,armor:50,mr:20},skill:{name:"兵主",desc:"攻速+50%+溅射",type:"enrage",val:0.5},tier:"legend"},
+    legend_jingwei:{name:"精卫",emoji:"🐦",cost:2,race:"mu",job:"fashi",base:{hp:1800,atk:220,range:5,atkSpd:0.9,armor:15,mr:50},skill:{name:"填海",desc:"持续AOE+回血",type:"heal",val:100},tier:"legend"},
+    legend_kuafu:  {name:"夸父",emoji:"🏃",cost:2,race:"huo",job:"zhanshi",base:{hp:3000,atk:200,range:2,atkSpd:0.95,armor:40,mr:15},skill:{name:"逐日",desc:"移动加速+首击双倍",type:"firstDouble",val:2.0},tier:"legend"},
+  },
+  // 神话传说级装备（只有钻石能买）
+  equipment: {
+    myth_w: {name:"开天斧",slot:"weapon",rarity:6,stats:{atk:500,atkSpd:0.2,crit:0.3},emoji:"⚡",cost:3},
+    myth_a: {name:"混沌钟",slot:"armor",rarity:6,stats:{hp:5000,armor:100,mr:60,dmgReduct:0.15},emoji:"🔮",cost:3},
+    myth_acc:{name:"造化玉碟",slot:"accessory",rarity:6,stats:{atk:300,hp:3000,mr:80,crit:0.25,atkSpd:0.2},emoji:"🔯",cost:3},
+    legend_w:{name:"轩辕剑",slot:"weapon",rarity:5,stats:{atk:200,atkSpd:0.15,crit:0.2},emoji:"🌟",cost:1},
+    legend_a:{name:"天蚕丝甲",slot:"armor",rarity:5,stats:{hp:2000,armor:60,mr:40},emoji:"✨",cost:1},
+    legend_acc:{name:"昆仑镜",slot:"accessory",rarity:5,stats:{atk:120,hp:1000,mr:40,crit:0.12},emoji:"🪞",cost:1},
+  },
+  // 资源兑换
+  gold_pack_1: {name:"金币包(100)",emoji:"💰",cost:1,type:"gold",val:100},
+  gold_pack_2: {name:"金币包(500)",emoji:"💰",cost:3,type:"gold",val:500},
+  gold_pack_3: {name:"金币包(2000)",emoji:"💰",cost:10,type:"gold",val:2000},
+  // 附魔卷轴
+  enchant_scroll: {name:"附魔卷轴",emoji:"📜",cost:2,type:"enchant_scroll",val:1},
+};
+
+// 稀有度6=神话, 7=传说(用于颜色)
+const RARITY_COLORS_V5 = {1:'#aaa',2:'#4a9',3:'#4af',4:'#c4f',5:'#f80',6:'#f0f',7:'#ff0'};
+const RARITY_NAMES_V5 = {1:'普通',2:'精良',3:'稀有',4:'史诗',5:'传说',6:'神话',7:'神圣'};
