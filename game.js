@@ -361,7 +361,7 @@
   }
   function renderBoard() {
     const el=document.getElementById('board'); if(!el) return; let html='';
-    for (let y=0; y<8; y++) for (let x=0; x<BOARD_W; x++) { const k=`${x},${y}`; const u=state.board[k]; const ps=y>=4; const cls=`cell ${ps?'player-side':'enemy-side'} ${u?'occupied':''}`; html+=`<div class="${cls}" data-key="${k}">`; if (u) { const d=UNITS[u.id]; const eq=state.equipped[k]; const ei=eq?[eq.weapon,eq.armor,eq.accessory].filter(Boolean).map(id=>EQUIPMENT[id].emoji).join(''):''; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}</span>${ei?`<span class="unit-eq">${ei}</span>`:''}`; } html+='</div>'; }
+    for (let y=0; y<8; y++) for (let x=0; x<BOARD_W; x++) { const k=`${x},${y}`; const u=state.board[k]; const ps=y>=4; const cls=`cell ${ps?'player-side':'enemy-side'} ${u?'occupied':''}`; html+=`<div class="${cls}" data-key="${k}">`; if (u) { const d=UNITS[u.id]; const eq=state.equipped[k]; const ei=eq?[eq.weapon,eq.armor,eq.accessory].filter(Boolean).map(id=>EQUIPMENT[id]?.emoji||'').join(''):''; const enh=state.enhance[k]||0; const ench=state.enchant[k]; const enchE=ench&&ENCHANTS[ench]?ENCHANTS[ench].emoji:''; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}${enh>0?`+${enh}`:''}</span>${ei?`<span class="unit-eq">${ei}${enchE}</span>`:''}`; } html+='</div>'; }
     el.innerHTML=html;
     el.querySelectorAll('.cell.occupied').forEach(c => { c.onclick=()=>{ const k=c.dataset.key; if(state.board[k]&&confirm(`卖出 ${UNITS[state.board[k].id].name}?`)) sellUnit(true,k); }; });
   }
