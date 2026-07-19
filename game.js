@@ -495,9 +495,11 @@
         state.loseStreak++; state.winStreak = 0;
         const lossBonus = STREAK_GOLD[Math.min(state.loseStreak, 9)] || 0;
         const interest = Math.min(INTEREST_MAX, Math.floor(state.gold / INTEREST_PER));
-        state.gold += 5 + lossBonus + interest;
-        toast(`失败...+${5+lossBonus+interest}金`, '💀');
+        const lossGold = 7 + lossBonus + interest;
+        state.gold += lossGold;
+        toast(`失败...+${lossGold}金（继续推进）`, '💀');
         sfx.fail();
+        state.level++;  // 输了也推进波数
       }
 
       refreshShop();
