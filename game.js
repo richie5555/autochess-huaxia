@@ -393,7 +393,38 @@
   function showSystems(tab) {
     tab=tab||'equip'; const modal=document.getElementById('sys-modal'); if(!modal) return;
     let html=`<div class="sys-modal-content"><div class="sys-tabs"><button class="sys-tab ${tab==='equip'?'active':''}" onclick="window._ac.showSystems('equip')">🎒装备</button><button class="sys-tab ${tab==='gem'?'active':''}" onclick="window._ac.showSystems('gem')">💎宝石</button><button class="sys-tab ${tab==='pet'?'active':''}" onclick="window._ac.showSystems('pet')">🐾宠物</button><button class="sys-tab ${tab==='wing'?'active':''}" onclick="window._ac.showSystems('wing')">🪽翅膀</button></div><div class="sys-content">`;
-    if (tab==='equip') { html+='<h3>装备背包</h3>'; if (state.inventory.length===0) html+='<p class="empty-text">暂无装备，胜利后掉落</p>'; else { html+='<div class="equip-grid">'; for (const eId of state.inventory) { const e=EQUIPMENT[eId]; const rc=RARITY_COLORS[e.rarity]; html+=`<div class="equip-item" style="border-color:${rc}" onclick="window._ac.selectEquipTarget('${eId}')"><span>${e.emoji}</span><span style="color:${rc}">${e.name}</span><span class="equip-stat">${Object.entries(e.stats).map(([k,v])=>`${k}+${v}`).join(' ')}</span></div>`; } html+='</div>'; } html+='<h3>单位装备</h3>'; for (const [key,u] of Object.entries(state.board)) { const d=UNITS[u.id]; const eq=state.equipped[key]||{}; html+=`<div class="equip-unit-row"><span>${d.emoji}${d.name}${'★'.repeat(u.star)}</span>`; for (const slot of EQUIP_SLOTS) { const eId=eq[slot]; html+=`<span class="equip-slot-display ${eId?'filled':'empty'}" onclick="window._ac.equipSlot('${key}','${slot}')">${eId?EQUIPMENT[eId].emoji:EQUIP_SLOTS_NAME[slot]}</span>`; } html+='</div>'; } }
+    if (tab==='equip') {
+        // 分类展示：武器/护甲/饰品
+        const cats = {weapon:{name:'🗡️武器',items:[]}, armor:{name:'🛡️护甲',items:[]}, accessory:{name:'📿饰品',items:[]}};
+        for (const eId of state.inventory) { const e=EQUIPMENT[eId]; if(e&&cats[e.slot]) cats[e.slot].items.push(eId); }
+        // 一键分解按钮
+        html+=`<div class="equip-toolbar"><h3>装备背包 (${state.inventory.length})</h3>`;
+        if (state.inventory.length>0) html+=`<button class="decompose-all-btn" onclick="window._ac.decomposeAll()">♻️一键分解全部(${state.inventory.length}件)</button>`;
+        html+='</div>';
+        if (state.inventory.length===0) html+='<p class="empty-text">暂无装备，胜利后掉落</p>';
+        else {
+          for (const [slot,c] of Object.entries(cats)) {
+            if (c.items.length===0) continue;
+            html+=`<div class="equip-cat-header">${c.name} (${c.items.length}) <button class="decompose-cat-btn" onclick="window._ac.decomposeBySlot('${slot}')">♻️分解此类</button></div>`;
+            html+='<div class="equip-grid">';
+            for (const eId of c.items) {
+              const e=EQUIPMENT[eId]; const rc=(RARITY_COLORS[e.rarity]||RARITY_COLORS_V5[e.rarity]||'#aaa');
+              html+=`<div class="equip-item" style="border-color:${rc}" onclick="window._ac.selectEquipTarget('${eId}')"><span>${e.emoji}</span><span style="color:${rc}">${e.name}</span><span class="equip-stat">${Object.entries(e.stats).map(([k,v])=>`${k}+${v}`).join(' ')}</span><button class="decompose-one-btn" onclick="event.stopPropagation();window._ac.decomposeOne('${eId}')">♻️${e.rarity*3}💰</button></div>`;
+            }
+            html+='</div>';
+          }
+        }
+        html+='<h3>单位装备</h3>';
+        for (const [key,u] of Object.entries(state.board)) {
+          const d=UNITS[u.id]; const eq=state.equipped[key]||{};
+          html+=`<div class="equip-unit-row"><span>${d.emoji}${d.name}${'★'.repeat(u.star)}</span>`;
+          for (const slot of EQUIP_SLOTS) {
+            const eId=eq[slot];
+            html+=`<span class="equip-slot-display ${eId?'filled':'empty'}" onclick="window._ac.equipSlot('${key}','${slot}')">${eId?EQUIPMENT[eId].emoji:EQUIP_SLOTS_NAME[slot]}</span>`;
+          }
+          html+='</div>';
+        }
+      }
     else if (tab==='gem') { html+='<div class="gem-grid">'; for (const [color,g] of Object.entries(GEM_TYPES)) { const c=state.gems[color]||0; const lv=state.gems[color+'_level']||0; html+=`<div class="gem-item" style="border-color:${g.color}"><span>${g.emoji}</span><span style="color:${g.color}">${g.name}</span><span>x${c}</span><span>Lv.${lv}</span>${c>=GEM_MERGE_COST?`<button onclick="window._ac.mergeGems('${color}')">合成</button>`:''}</div>`; } html+='</div>'; }
     else if (tab==='pet') { if (state.wave<PET_UNLOCK_WAVE) html+=`<p class="empty-text">第${PET_UNLOCK_WAVE}波解锁</p>`; else { html+='<div class="pet-grid">'; for (const [id,p] of Object.entries(PETS)) { const ul=state.petUnlocked.includes(id); const ac=state.pet===id; html+=`<div class="pet-item ${ac?'active':''}" ${ul||p.cost===0?`onclick="window._ac.unlockPet('${id}')"`:''}><span>${p.emoji}</span><span>${p.name}</span><span>${p.skill.desc}</span>${ul?`<span>${ac?'装备中':'点击装备'}</span>`:`<span>${p.cost}💰</span>`}</div>`; } html+='</div>'; } }
     else if (tab==='wing') { if (state.wing<WING_UNLOCK_WAVE) html+=`<p class="empty-text">第${WING_UNLOCK_WAVE}波解锁</p>`; else { html+='<div class="wing-grid">'; for (const [id,w] of Object.entries(WINGS)) { const ul=state.wingUnlocked.includes(id); const ac=state.wing===id; html+=`<div class="wing-item ${ac?'active':''}" ${ul||w.cost===0?`onclick="window._ac.unlockWing('${id}')"`:''}><span>${w.emoji||'❌'}</span><span>${w.name}</span><span>${w.skill.desc}</span>${ul?`<span>${ac?'装备中':'点击装备'}</span>`:`<span>${w.cost}💰</span>`}</div>`; } html+='</div>'; } }
@@ -474,6 +505,43 @@
     saveState(); render(); showSystems('shop');
   }
 
-  window._ac = { buyUnit, buyXP, toggleLock, startBattle, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
+
+  // === 装备分解系统 ===
+  function decomposeOne(eId) {
+    const i = state.inventory.indexOf(eId);
+    if (i < 0) return;
+    const e = EQUIPMENT[eId]; if (!e) return;
+    const refund = e.rarity * 3;
+    state.inventory.splice(i, 1);
+    state.gold += refund;
+    toast(`分解${e.emoji}${e.name} +${refund}💰`, '♻️');
+    saveState(); render(); showSystems('equip');
+  }
+  function decomposeBySlot(slot) {
+    let count = 0, gold = 0;
+    for (let i = state.inventory.length - 1; i >= 0; i--) {
+      const eId = state.inventory[i];
+      const e = EQUIPMENT[eId];
+      if (e && e.slot === slot) {
+        state.inventory.splice(i, 1);
+        gold += e.rarity * 3;
+        count++;
+      }
+    }
+    state.gold += gold;
+    if (count > 0) toast(`分解${count}件${EQUIP_SLOTS_NAME[slot]} +${gold}💰`, '♻️');
+    else toast(`无${EQUIP_SLOTS_NAME[slot]}可分解`);
+    saveState(); render(); showSystems('equip');
+  }
+  function decomposeAll() {
+    let count = state.inventory.length, gold = 0;
+    for (const eId of state.inventory) { const e = EQUIPMENT[eId]; if (e) gold += e.rarity * 3; }
+    state.inventory = [];
+    state.gold += gold;
+    if (count > 0) toast(`一键分解${count}件装备 +${gold}💰`, '♻️');
+    saveState(); render(); showSystems('equip');
+  }
+
+  window._ac = { buyUnit, buyXP, toggleLock, startBattle, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
   document.addEventListener('DOMContentLoaded', init);
 })();
