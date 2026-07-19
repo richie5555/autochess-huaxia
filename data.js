@@ -4,7 +4,7 @@
 // === 常量 ===
 const BOARD_W = 8, BOARD_H = 8;
 const BENCH_SIZE = 9, SHOP_SIZE = 5;
-const MAX_PLAYER_LEVEL = 10;
+const MAX_PLAYER_LEVEL = 999;
 const START_GOLD = 10;
 const INTEREST_PER = 3, INTEREST_MAX = 8;
 const XP_COST = 2, XP_PER_LEVEL = 4;
