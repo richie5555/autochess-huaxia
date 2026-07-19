@@ -173,3 +173,20 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--
 .decompose-cat-btn:active { transform:scale(0.95); }
 .decompose-one-btn { display:block; margin:4px auto 0; padding:2px 8px; font-size:9px; background:#333; color:#f85149; border:1px solid #f85149; border-radius:3px; cursor:pointer; }
 .decompose-one-btn:active { transform:scale(0.95); }
+
+
+/* 单位属性面板 */
+.unit-info-panel { padding:4px; }
+.unit-info-header { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.unit-info-emoji { font-size:28px; }
+.unit-info-name { font-size:16px; font-weight:700; color:var(--accent); }
+.unit-info-stars { font-size:12px; color:var(--gold); }
+.unit-info-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:4px; margin-bottom:8px; }
+.stat-row { display:flex; justify-content:space-between; padding:3px 8px; background:var(--bg); border-radius:3px; font-size:12px; }
+.stat-val { font-weight:600; color:var(--green); }
+.unit-info-section { margin:6px 0; padding:6px; background:var(--bg); border-radius:4px; }
+.unit-info-section h4 { font-size:11px; color:var(--accent); margin-bottom:3px; }
+.skill-row { font-size:11px; color:var(--text-dim); }
+.race-job-row { font-size:12px; }
+.syn-active { font-size:10px; color:var(--green); margin-top:3px; }
+.equip-list-row { font-size:11px; color:var(--text-dim); }
