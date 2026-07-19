@@ -53,10 +53,10 @@
   function refreshShop() { if (!state.lockedShop) state.shop = Array.from({length: SHOP_SIZE}, () => rollUnit()); }
   function toggleLock() { state.lockedShop = !state.lockedShop; saveState(); render(); }
   function buyXP() {
-    if (state.playerLevel >= MAX_PLAYER_LEVEL) { toast('已满级！'); return; }
+    
     if (state.gold < XP_COST) { toast('💰金币不足！'); return; }
     state.gold -= XP_COST; state.xp += 1 + (state.pet === 'p4' ? 0.3 : 0);
-    while (state.xp >= XP_PER_LEVEL && state.playerLevel < MAX_PLAYER_LEVEL) {
+    while (state.xp >= XP_PER_LEVEL) {
       state.xp -= XP_PER_LEVEL; state.playerLevel++;
       toast(`等级提升至Lv.${state.playerLevel}！可上场${getMaxBoard()}个`, '⭐');
     }
@@ -357,7 +357,7 @@
     const nl=getLevel(state.wave);
     const pe=state.pet?PETS[state.pet].emoji:'';
     const we=state.wing&&state.wing!=='w0'?WINGS[state.wing].emoji:'';
-    el.innerHTML=`<div class="top-info"><span class="title">华夏</span><span class="level-badge">Lv.${state.playerLevel}</span>${pe?`<span class="pet-badge">${pe}</span>`:''}${we?`<span class="wing-badge">${we}</span>`:''}</div><div class="top-stats"><span class="gold">💰${state.gold}</span><span class="diamond">💎${state.diamonds||0}</span><span class="wave">${state.wave}/∞</span><span class="streak">${si}</span><span class="interest">息+${it}</span></div><div class="top-actions"><button class="action-btn" onclick="window._ac.buyXP()">经验${state.playerLevel>=10?'MAX':`${XP_COST}💰 ${state.xp|0}/${XP_PER_LEVEL}`}</button><button class="action-btn" onclick="window._ac.toggleLock()">${state.lockedShop?'🔒':'🔓'}</button><button class="action-btn" onclick="window._ac.showSystems('equip')">🎒${state.inventory.length}</button></div>`;
+    el.innerHTML=`<div class="top-info"><span class="title">华夏</span><span class="level-badge">Lv.${state.playerLevel}</span>${pe?`<span class="pet-badge">${pe}</span>`:''}${we?`<span class="wing-badge">${we}</span>`:''}</div><div class="top-stats"><span class="gold">💰${state.gold}</span><span class="diamond">💎${state.diamonds||0}</span><span class="wave">${state.wave}/∞</span><span class="streak">${si}</span><span class="interest">息+${it}</span></div><div class="top-actions"><button class="action-btn" onclick="window._ac.buyXP()">经验${`${XP_COST}💰 ${state.xp|0}/${XP_PER_LEVEL}`}</button><button class="action-btn" onclick="window._ac.toggleLock()">${state.lockedShop?'🔒':'🔓'}</button><button class="action-btn" onclick="window._ac.showSystems('equip')">🎒${state.inventory.length}</button></div>`;
   }
   function renderBoard() {
     const el=document.getElementById('board'); if(!el) return; let html='';
