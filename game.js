@@ -9,7 +9,7 @@
 
   function defaultState() {
     return {
-      level: 1, gold: START_GOLD, playerLevel: 2, xp: 0,
+      level: 1, gold: START_GOLD, playerLevel: 3, xp: 0,
       winStreak: 0, loseStreak: 0,
       board: {}, bench: [], shop: [], lockedShop: false,
       discovered: [...Object.keys(UNITS).slice(0,5)],
@@ -96,12 +96,11 @@
 
   // 买经验：买1次+1xp，4xp升1级
   function buyXP() {
-    const cost = 4;
     if (state.playerLevel >= MAX_PLAYER_LEVEL) { toast('已满级！'); return; }
-    if (state.gold < cost) { toast('💰金币不足！需要4金'); sfx.fail(); return; }
-    state.gold -= cost;
+    if (state.gold < XP_COST) { toast(`💰金币不足！需要${XP_COST}金`); sfx.fail(); return; }
+    state.gold -= XP_COST;
     state.xp = (state.xp || 0) + 1;
-    if (state.xp >= 4) { state.playerLevel++; state.xp = 0; toast(`等级提升至 Lv.${state.playerLevel}！可上场${getMaxBoard()}个单位`, '⬆️'); sfx.discover(); }
+    if (state.xp >= XP_PER_LEVEL) { state.playerLevel++; state.xp = 0; toast(`等级提升至 Lv.${state.playerLevel}！可上场${getMaxBoard()}个`, '⬆️'); sfx.discover(); }
     saveState(); render();
   }
 
@@ -401,11 +400,11 @@
       if (u.dmgTexts) {
         for (const d of u.dmgTexts) {
           const ty = py - r - 8 - (40 - d.life) * 0.8 + d.y * 20;
-          const alpha = d.life / 40;
-          ctx.font = 'bold 14px sans-serif';
-          ctx.fillStyle = `rgba(255,200,50,${alpha})`;
+          const alpha = Math.min(1, d.life / 20);
+          ctx.font = 'bold 16px sans-serif';
+          ctx.fillStyle = d.crit ? `rgba(255,100,0,${alpha})` : `rgba(255,220,50,${alpha})`;
           ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
-          ctx.lineWidth = 3;
+          ctx.lineWidth = 4;
           const txt = `-${d.val}`;
           ctx.strokeText(txt, px + d.x * 30, ty);
           ctx.fillText(txt, px + d.x * 30, ty);
@@ -508,7 +507,7 @@
     const el = document.getElementById('topbar');
     if (!el) return;
     const interest = Math.min(INTEREST_MAX, Math.floor(state.gold / INTEREST_PER));
-    const xpNeed = 4;
+    const xpNeed = XP_PER_LEVEL;
     el.innerHTML = `
       <div class="top-info">
         <span class="title">自走棋·华夏</span>
@@ -522,7 +521,7 @@
         <span class="interest">利息+${interest}</span>
       </div>
       <div class="top-actions">
-        <button id="xp-btn" class="action-btn ${state.gold>=4?'':'disabled'}">经验4💰 ${state.xp||0}/${xpNeed}</button>
+        <button id="xp-btn" class="action-btn ${state.gold>=XP_COST?'':'disabled'}">经验${XP_COST}💰 ${state.xp||0}/${xpNeed}</button>
         <button id="lock-btn" class="action-btn">${state.lockedShop?'🔒':'🔓'}</button>
         <button id="reset-btn" class="action-btn">↺</button>
       </div>
