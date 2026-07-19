@@ -240,7 +240,7 @@
     canvas.height = canvas.offsetHeight;
     const cw = canvas.width / 8, ch = canvas.height / 8;
 
-    battle = { all, player, enemy, tick: 0, maxTick: 1500, done: false, callback, cw, ch };
+    battle = { all, player, enemy, tick: 0, maxTick: 1200, done: false, callback, cw, ch };
 
     function frame() {
       if (!battle || battle.done) return;
