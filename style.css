@@ -1,4 +1,4 @@
-/* 自走棋·华夏 - 移动端样式 */
+/* 自走棋·华夏 - 移动端样式 v2 (修复布局) */
 
 :root {
   --bg: #0d1117;
@@ -19,72 +19,88 @@
 html, body { height: 100%; overflow: hidden; -webkit-tap-highlight-color: transparent; user-select: none; }
 body { font-family: "PingFang SC","Microsoft YaHei",sans-serif; background: var(--bg); color: var(--text); touch-action: manipulation; overscroll-behavior: none; }
 
-#app { display: flex; flex-direction: column; height: 100dvh; max-width: 600px; margin: 0 auto; position: relative; }
+#app { display: flex; flex-direction: column; height: 100dvh; max-width: 600px; margin: 0 auto; position: relative; overflow: hidden; }
 
 /* === 顶部栏 === */
-#topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--bg-mid); border-bottom: 1px solid var(--border); flex-shrink: 0; padding-top: max(8px, env(safe-area-inset-top)); flex-wrap: wrap; gap: 4px; }
-.top-info { display: flex; align-items: center; gap: 8px; }
-.top-info .title { font-size: 15px; font-weight: 600; color: var(--accent); }
-.top-info .level-badge { font-size: 11px; background: var(--bg-light); padding: 2px 6px; border-radius: 4px; color: var(--blue); }
-.top-stats { display: flex; gap: 10px; font-size: 12px; }
+#topbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--bg-mid); border-bottom: 1px solid var(--border); flex-shrink: 0; padding-top: max(6px, env(safe-area-inset-top)); flex-wrap: wrap; gap: 4px; }
+.top-info { display: flex; align-items: center; gap: 6px; }
+.top-info .title { font-size: 14px; font-weight: 600; color: var(--accent); }
+.top-info .level-badge { font-size: 10px; background: var(--bg-light); padding: 1px 5px; border-radius: 3px; color: var(--blue); }
+.top-stats { display: flex; gap: 8px; font-size: 11px; align-items: center; }
 .top-stats .gold { color: var(--gold); font-weight: 600; }
 .top-stats .wave { color: var(--text); }
-.top-stats .streak { color: var(--green); }
-.top-stats .interest { color: var(--text-dim); font-size: 11px; }
-.top-actions { display: flex; gap: 4px; }
-
-.action-btn { background: var(--bg-light); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+.top-stats .streak { color: var(--green); font-size: 10px; }
+.top-stats .interest { color: var(--text-dim); font-size: 10px; }
+.top-actions { display: flex; gap: 3px; }
+.action-btn { background: var(--bg-light); border: 1px solid var(--border); color: var(--text); padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; white-space: nowrap; }
 .action-btn:active { transform: scale(0.95); background: var(--border); }
 
 /* === 棋盘 === */
-#board { display: flex; flex-direction: column; align-items: center; padding: 6px; background: var(--bg-mid); flex-shrink: 0; }
-.cell { display: inline-flex; align-items: center; justify-content: center; flex-direction: column; width: 36px; height: 36px; border: 1px solid var(--border); background: var(--bg); margin: 1px; border-radius: 4px; cursor: pointer; position: relative; vertical-align: top; }
+#board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 1px;
+  padding: 4px;
+  background: var(--bg-mid);
+  flex-shrink: 0;
+  aspect-ratio: 8/8;
+  max-height: 50vh;
+}
+
+.cell {
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  border: 1px solid var(--border); background: var(--bg); border-radius: 3px;
+  cursor: pointer; position: relative; aspect-ratio: 1; min-width: 0; min-height: 0;
+}
 .cell.player-side { background: rgba(63,185,80,0.05); }
 .cell.enemy-side { background: rgba(248,81,73,0.05); }
 .cell.occupied { background: var(--bg-light); border-color: var(--accent); }
-.unit-emoji { font-size: 18px; line-height: 1; }
-.unit-stars { font-size: 7px; color: var(--accent); line-height: 1; margin-top: 1px; }
-.unit-cost { font-size: 8px; color: var(--gold); }
+.unit-emoji { font-size: 14px; line-height: 1; }
+.unit-stars { font-size: 6px; color: var(--accent); line-height: 1; margin-top: 1px; }
+.unit-cost { font-size: 7px; color: var(--gold); }
 
 /* === 羁绊 === */
-#synergies { display: flex; align-items: center; padding: 4px 12px; background: var(--bg-mid); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 8px; overflow-x: auto; }
-.syn-label { font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
-.syn-list { display: flex; gap: 4px; }
-.syn-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+#synergies { display: flex; align-items: center; padding: 3px 10px; background: var(--bg-mid); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 6px; overflow-x: auto; min-height: 22px; }
+.syn-label { font-size: 9px; color: var(--text-dim); flex-shrink: 0; }
+.syn-list { display: flex; gap: 3px; }
+.syn-tag { font-size: 9px; padding: 1px 4px; border-radius: 3px; white-space: nowrap; }
 .syn-tag.race { background: rgba(200,160,74,0.2); color: var(--accent); }
 .syn-tag.job { background: rgba(74,158,255,0.2); color: var(--blue); }
-.syn-empty { font-size: 10px; color: var(--text-dim); }
+.syn-empty { font-size: 9px; color: var(--text-dim); }
 
 /* === 备战席 === */
-#bench { display: flex; flex-direction: column; padding: 4px 8px; background: var(--bg-mid); flex-shrink: 0; }
-.bench-label { font-size: 10px; color: var(--text-dim); margin-bottom: 2px; }
-.bench-slots { display: flex; gap: 3px; }
-.bench-slot { width: 40px; height: 44px; border: 1px dashed var(--border); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
+#bench { display: flex; flex-direction: column; padding: 3px 8px; background: var(--bg-mid); flex-shrink: 0; }
+.bench-label { font-size: 9px; color: var(--text-dim); margin-bottom: 2px; }
+.bench-slots { display: flex; gap: 2px; }
+.bench-slot { width: 11%; aspect-ratio: 1; border: 1px dashed var(--border); border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; min-height: 0; }
 .bench-slot.occupied { border-style: solid; border-color: var(--accent); background: var(--bg-light); }
+.bench-slot .unit-emoji { font-size: 12px; }
+.bench-slot .unit-stars { font-size: 6px; }
+.bench-slot .unit-cost { font-size: 7px; }
 
 /* === 商店 === */
-#shop { padding: 6px 8px; background: var(--bg-mid); border-top: 1px solid var(--border); flex-shrink: 0; }
-.shop-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.shop-header span:first-child { font-size: 12px; color: var(--text); font-weight: 600; }
-.odds { font-size: 9px; color: var(--text-dim); }
-.shop-slots { display: flex; gap: 4px; margin-bottom: 4px; }
+#shop { padding: 4px 8px; background: var(--bg-mid); border-top: 1px solid var(--border); flex-shrink: 0; }
+.shop-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+.shop-header span:first-child { font-size: 11px; color: var(--text); font-weight: 600; }
+.odds { font-size: 8px; color: var(--text-dim); }
+.shop-slots { display: flex; gap: 3px; margin-bottom: 3px; }
 .shop-slot { flex: 1; min-width: 0; }
-.shop-slot.empty .shop-unit { opacity: 0.2; }
-.shop-unit { border: 2px solid; border-radius: 6px; padding: 4px; display: flex; flex-direction: column; align-items: center; background: var(--bg); cursor: pointer; }
-.shop-unit .unit-emoji { font-size: 20px; }
-.shop-unit .unit-name { font-size: 9px; color: var(--text); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.shop-unit .unit-cost { font-size: 9px; color: var(--gold); }
+.shop-slot.empty .shop-unit { opacity: 0.15; }
+.shop-unit { border: 2px solid; border-radius: 4px; padding: 3px; display: flex; flex-direction: column; align-items: center; background: var(--bg); cursor: pointer; }
+.shop-unit .unit-emoji { font-size: 16px; }
+.shop-unit .unit-name { font-size: 8px; color: var(--text); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.shop-unit .unit-cost { font-size: 8px; color: var(--gold); }
 .cost-1 { border-color: #8a9a6a !important; }
 .cost-2 { border-color: #4a9eff !important; }
 .cost-3 { border-color: #9a4aff !important; }
 .cost-4 { border-color: #ff9a3a !important; }
-.cost-5 { border-color: var(--gold) !important; box-shadow: 0 0 6px rgba(240,192,80,0.3); }
-.shop-actions { display: flex; gap: 6px; }
-.battle-btn { flex: 1; background: var(--green); color: var(--bg); border: none; padding: 8px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.cost-5 { border-color: var(--gold) !important; box-shadow: 0 0 4px rgba(240,192,80,0.3); }
+.shop-actions { display: flex; gap: 4px; }
+.battle-btn { flex: 1; background: var(--green); color: var(--bg); border: none; padding: 6px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .battle-btn:active { transform: scale(0.97); }
 
 /* === Toast === */
-.toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%) translateY(-20px); display: flex; gap: 6px; align-items: center; padding: 8px 14px; background: var(--bg-mid); border: 1px solid var(--accent); border-radius: 8px; z-index: 200; opacity: 0; transition: all 0.3s; font-size: 13px; max-width: 90%; }
+.toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%) translateY(-20px); display: flex; gap: 6px; align-items: center; padding: 6px 12px; background: var(--bg-mid); border: 1px solid var(--accent); border-radius: 6px; z-index: 200; opacity: 0; transition: all 0.3s; font-size: 12px; max-width: 90%; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* === 弹窗 === */
@@ -97,8 +113,14 @@ body { font-family: "PingFang SC","Microsoft YaHei",sans-serif; background: var(
 
 /* === 响应式 === */
 @media (max-width: 400px) {
-  .cell { width: 32px; height: 32px; }
-  .unit-emoji { font-size: 16px; }
-  .bench-slot { width: 36px; height: 40px; }
-  .shop-unit .unit-name { font-size: 8px; }
+  .unit-emoji { font-size: 12px; }
+  .shop-unit .unit-name { font-size: 7px; }
+  .top-info .title { font-size: 13px; }
+  .top-stats { font-size: 10px; gap: 5px; }
+}
+
+@media (min-width: 500px) {
+  .cell .unit-emoji { font-size: 18px; }
+  .bench-slot .unit-emoji { font-size: 14px; }
+  .shop-unit .unit-emoji { font-size: 20px; }
 }
