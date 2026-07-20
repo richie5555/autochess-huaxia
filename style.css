@@ -10,22 +10,22 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--
 #app { display:flex; flex-direction:column; height:100dvh; max-width:600px; margin:0 auto; position:relative; overflow:hidden; }
 
 /* 顶部栏 */
-#topbar { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:var(--bg-mid); border-bottom:1px solid var(--border); flex-shrink:0; padding-top:max(6px,env(safe-area-inset-top)); flex-wrap:wrap; gap:4px; }
+#topbar { display:flex; align-items:center; justify-content:space-between; padding:6px 8px; background:var(--bg-mid); border-bottom:1px solid var(--border); flex-shrink:0; padding-top:max(6px,env(safe-area-inset-top)); flex-wrap:wrap; gap:2px; font-size:10px; }
 .top-info { display:flex; align-items:center; gap:6px; }
 .top-info .title { font-size:14px; font-weight:600; color:var(--accent); }
 .top-info .level-badge { font-size:10px; background:var(--bg-light); padding:1px 5px; border-radius:3px; color:var(--blue); }
 .top-info .pet-badge, .top-info .wing-badge { font-size:12px; }
-.top-stats { display:flex; gap:8px; font-size:11px; align-items:center; }
+.top-stats { display:flex; gap:5px; font-size:10px; align-items:center; }
 .top-stats .gold { color:var(--gold); font-weight:600; }
 .top-stats .wave { color:var(--text); }
 .top-stats .streak { color:var(--green); font-size:10px; }
 .top-stats .interest { color:var(--text-dim); font-size:10px; }
 .top-actions { display:flex; gap:3px; }
-.action-btn { background:var(--bg-light); border:1px solid var(--border); color:var(--text); padding:4px 6px; border-radius:4px; font-size:10px; cursor:pointer; white-space:nowrap; }
+.action-btn { background:var(--bg-light); border:1px solid var(--border); color:var(--text); padding:3px 5px; border-radius:3px; font-size:9px; cursor:pointer; white-space:nowrap; }
 .action-btn:active { transform:scale(0.95); background:var(--border); }
 
 /* 棋盘 */
-#board { display:grid; grid-template-columns:repeat(8,1fr); gap:1px; padding:4px; background:var(--bg-mid); flex-shrink:0; aspect-ratio:1; max-height:48vh; }
+#board { display:grid; grid-template-columns:repeat(8,1fr); gap:1px; padding:4px; background:var(--bg-mid); flex-shrink:0; aspect-ratio:1; max-height:42vh; }
 .cell { display:flex; align-items:center; justify-content:center; flex-direction:column; border:1px solid var(--border); background:var(--bg); border-radius:3px; cursor:pointer; position:relative; aspect-ratio:1; min-width:0; min-height:0; }
 .cell.player-side { background:rgba(63,185,80,0.05); }
 .cell.enemy-side { background:rgba(248,81,73,0.05); }
@@ -46,7 +46,7 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--
 .syn-tag.inactive { opacity:0.4; }
 
 /* 备战席 */
-#bench { display:flex; flex-direction:column; padding:3px 8px; background:var(--bg-mid); flex-shrink:0; }
+#bench { display:flex; flex-direction:column; padding:2px 6px; background:var(--bg-mid); flex-shrink:0; }
 .bench-label { font-size:9px; color:var(--text-dim); margin-bottom:2px; }
 .bench-slots { display:flex; gap:2px; }
 .bench-slot { width:11%; aspect-ratio:1; border:1px dashed var(--border); border-radius:3px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; }
@@ -54,7 +54,7 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--
 .bench-slot:active { transform:scale(0.95); }
 
 /* 商店 */
-#shop { padding:4px 8px; background:var(--bg); flex-shrink:0; }
+#shop { padding:3px 6px; background:var(--bg); flex-shrink:0; }
 .shop-header { display:flex; justify-content:space-between; font-size:9px; color:var(--text-dim); margin-bottom:3px; }
 .shop-slots { display:flex; gap:3px; margin-bottom:4px; }
 .shop-slot { flex:1; min-width:0; }
@@ -70,7 +70,7 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--
 .battle-btn:disabled { opacity:0.5; }
 
 /* 装备栏 */
-#equip-bar { display:flex; padding:3px 8px; background:var(--bg-mid); border-top:1px solid var(--border); flex-shrink:0; }
+#equip-bar { display:flex; padding:2px 6px; background:var(--bg-mid); border-top:1px solid var(--border); flex-shrink:0; }
 .equip-icons { display:flex; gap:8px; align-items:center; }
 .equip-icon { font-size:14px; padding:3px 6px; border-radius:4px; background:var(--bg-light); cursor:pointer; }
 .equip-icon:active { transform:scale(0.95); }
