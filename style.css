@@ -190,3 +190,8 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--
 .race-job-row { font-size:12px; }
 .syn-active { font-size:10px; color:var(--green); margin-top:3px; }
 .equip-list-row { font-size:11px; color:var(--text-dim); }
+
+
+/* 自动战斗按钮 */
+.auto-btn { background:linear-gradient(135deg,#3a3a3a,#5a5a5a); color:#0ff; border:1px solid #0ff; font-size:12px; padding:8px 10px; border-radius:6px; cursor:pointer; font-weight:600; flex:0 0 auto; }
+.auto-btn:active { transform:scale(0.95); }
