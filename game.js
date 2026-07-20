@@ -335,6 +335,8 @@
         const lb = STREAK_GOLD[Math.min(state.loseStreak,9)]||0;
         const it = Math.min(INTEREST_MAX, Math.floor(state.gold/INTEREST_PER));
         const lg = 7+lb+it; state.gold += lg; toast(`失败...+${lg}金（继续推进）`, '💀'); sfx.fail();
+        // 失败也有50%概率掉装备
+        if (Math.random() < 0.5) { const drop = rollEquip(); if (drop) { state.inventory.push(drop); toast(`获得${EQUIPMENT[drop].emoji} ${EQUIPMENT[drop].name}！`, '📦'); } }
       }
       if (state.wave % 10 === 0) { state.diamonds = (state.diamonds||0) + 1; toast(`通关${state.wave}波! 奖励1💎`, '🎁'); }
       // 胜利自动+1经验
