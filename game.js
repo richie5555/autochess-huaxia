@@ -584,6 +584,142 @@
   }
 
 
+
+  // === 即时战斗模拟（无动画）===
+  function simulateBattle(playerBoard, enemyUnits, callback) {
+    const synergies = getSynergies(playerBoard);
+    const player = [];
+    for (const [key, u] of Object.entries(playerBoard)) { const [x,y] = key.split(',').map(Number); player.push(makeCombatant(u,'player',x,y,key)); }
+    const enemy = [];
+    for (const e of enemyUnits) { const ec = makeCombatant(e,'enemy',e.pos[0],e.pos[1]); if (e.scale) { ec.hp=Math.round(ec.hp*e.scale); ec.maxHp=ec.hp; ec.atk=Math.round(ec.atk*e.scale); } enemy.push(ec); }
+    applySynergyBuffs(player, synergies); applySynergyBuffs(enemy, getSynergiesFromUnits(enemyUnits));
+    if (state.pet==='p5') for (const p of player) p.revivePct = 0.3;
+    const all = [...player, ...enemy];
+    let tick = 0; const maxTick = 600;
+    while (tick < maxTick) {
+      tick++;
+      for (const u of all) {
+        if (u.hp <= 0) { if (u.revivePct && !u.revived) { u.revived=true; u.hp=Math.round(u.maxHp*u.revivePct); u.shield=0; u.stunTimer=0; } else { u.dead=true; continue; } }
+        if (u.regen && tick%60===0) u.hp = Math.min(u.maxHp, u.hp+u.regen);
+        if (u.burnTimer>0) { u.burnTimer--; if (tick%30===0) u.hp -= u.burnDmg||0; }
+        if (u.stunTimer>0) { u.stunTimer--; continue; }
+        if (u.slowTimer>0) u.slowTimer--;
+        if (!u.target || u.target.hp<=0) { let md=Infinity; for (const t of all) { if (t.team===u.team||t.hp<=0) continue; const d=Math.abs(t.x-u.x)+Math.abs(t.y-u.y); if (d<md) { md=d; u.target=t; } } }
+        if (!u.target) continue;
+        const dist = Math.max(Math.abs(u.target.x-u.x), Math.abs(u.target.y-u.y));
+        if (dist <= u.range) {
+          u.atkCd--;
+          const es = u.enrage && u.hp < u.maxHp*0.4 ? u.atkSpd*(1+u.enrage) : u.atkSpd;
+          const sm = u.slowTimer>0 ? 0.7 : 1;
+          if (u.atkCd <= 0) {
+            u.atkCd = Math.ceil(60/(es*sm));
+            let dmg = Math.max(1, u.atk - Math.round(u.target.armor*0.5));
+            const isCrit = Math.random() < (u.crit||0);
+            if (isCrit) dmg = Math.round(dmg*1.8);
+            if (u.target.dodge>0 && Math.random()<u.target.dodge) continue;
+            if (u.target.dmgReduct>0) dmg = Math.round(dmg*(1-u.target.dmgReduct));
+            if (u.target.shield>0) { const ab = Math.min(u.target.shield, dmg); u.target.shield -= ab; dmg -= ab; }
+            u.target.hp -= dmg;
+            if (u.target.reflect) u.hp -= Math.round(dmg*u.target.reflect/100);
+            if (u.skill && Math.random()<0.15) applySkillEffect(u, u.target, all);
+          }
+        } else {
+          const dx = Math.sign(u.target.x-u.x), dy = Math.sign(u.target.y-u.y);
+          const sp = 0.15 * (u.slowTimer>0 ? 0.5 : 1);
+          if (Math.abs(u.target.x-u.x) > Math.abs(u.target.y-u.y)) u.x += dx*sp; else u.y += dy*sp;
+        }
+      }
+      const pAlive = player.filter(u=>u.hp>0).length;
+      const eAlive = enemy.filter(u=>u.hp>0).length;
+      if (pAlive===0 || eAlive===0) break;
+    }
+    const pAlive = player.filter(u=>u.hp>0).length;
+    const eAlive = enemy.filter(u=>u.hp>0).length;
+    const won = eAlive===0 && pAlive>0;
+    callback({won, pAlive, eAlive, ticks:tick, synergies});
+  }
+
+
+  // === 批量自动推进 ===
+  var _fastMode = false;
+  function fastAutoPlay(targetWave) {
+    _fastMode = true;
+    var count = 0;
+    function next() {
+      if (state.wave > targetWave || count > 1000) { _fastMode = false; render(); toast('批量完成: 到达W'+state.wave); return; }
+      // 买5个单位
+      for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= UNITS[state.shop[i]].cost) buyUnitQuiet(i); }
+      // 有钱买经验(留3金)
+      while (state.gold >= XP_COST + 3) { buyXPQuiet(); }
+      // 没单位就刷新
+      if (Object.keys(state.board).length === 0 && state.bench.length === 0) {
+        if (state.gold >= REFRESH_COST) { state.gold -= REFRESH_COST; refreshShop(); }
+      }
+      // 从备战席放到棋盘
+      while (state.bench.length > 0 && canPlaceOnBoard()) {
+        for (let y=4; y<8; y++) for (let x=0; x<BOARD_W; x++) { const k=x+','+y; if (!state.board[k]) { state.board[k] = state.bench.pop(); break; } }
+      }
+      if (Object.keys(state.board).length === 0) { // 还是没单位，强制战斗
+        state.gold += 7; // 保底金币
+      }
+      // 即时战斗
+      const level = getLevel(state.wave);
+      if (!level) { _fastMode = false; render(); return; }
+      simulateBattle(state.board, level.enemies, (result) => {
+        state.battleLog.unshift({wave:state.wave, won:result.won, pAlive:result.pAlive, eAlive:result.eAlive});
+        if (state.battleLog.length > 50) state.battleLog.length = 50;
+        const waveGold = level.gold || 0;
+        if (result.won) {
+          state.winStreak++; state.loseStreak = 0;
+          const sb = STREAK_GOLD[Math.min(state.winStreak,9)]||5;
+          const it = Math.min(INTEREST_MAX, Math.floor(state.gold/INTEREST_PER));
+          const pb = state.pet==='p1' ? 0.1 : 0;
+          state.gold += Math.round(waveGold*(1+pb))+sb+it;
+          const drop = rollEquip(); if (drop) state.inventory.push(drop);
+          if (Math.random()<0.3) { const cs=Object.keys(GEM_TYPES); const gc=cs[Math.floor(Math.random()*cs.length)]; state.gems[gc]=(state.gems[gc]||0)+1; }
+          if (level.isBoss) { state.gold += waveGold; if (Math.random() < 0.3) state.diamonds = (state.diamonds||0) + 1; }
+        } else {
+          state.loseStreak++; state.winStreak = 0;
+          const lb = STREAK_GOLD[Math.min(state.loseStreak,9)]||0;
+          const it = Math.min(INTEREST_MAX, Math.floor(state.gold/INTEREST_PER));
+          state.gold += 7+lb+it;
+          if (Math.random() < 0.5) { const drop = rollEquip(); if (drop) state.inventory.push(drop); }
+        }
+        if (state.wave % 10 === 0) { state.diamonds = (state.diamonds||0) + 1; }
+        state.xp = (state.xp||0) + (result.won ? 2 : 1);
+        while (state.xp >= XP_PER_LEVEL) { state.xp -= XP_PER_LEVEL; state.playerLevel++; }
+        state.wave++; state.totalWaves = Math.max(state.totalWaves||0, state.wave-1);
+        // 卖掉备战席多余的1星（腾空间）
+        while (state.bench.length > BENCH_SIZE - 3) {
+          // 找最低星的卖
+          let minIdx = 0, minStar = 99;
+          for (let i = 0; i < state.bench.length; i++) { if (state.bench[i].star < minStar) { minStar = state.bench[i].star; minIdx = i; } }
+          const u = state.bench[minIdx]; if (u) state.gold += Math.floor(UNITS[u.id].cost * Math.pow(3, u.star-1) * 0.7);
+          state.bench.splice(minIdx, 1);
+        }
+        count++;
+        saveState(); next();
+      });
+    }
+    next();
+  }
+  function buyUnitQuiet(idx) {
+    const id = state.shop[idx]; if (!id) return;
+    const cost = UNITS[id].cost; if (state.gold < cost) return;
+    if (state.bench.length >= BENCH_SIZE && Object.keys(state.board).length >= getMaxBoard()) return;
+    state.gold -= cost; state.shop[idx] = null;
+    if (!state.discovered.includes(id)) state.discovered.push(id);
+    let placed = false;
+    if (canPlaceOnBoard()) { for (let y=4;y<8;y++) { for (let x=0;x<BOARD_W;x++) { const k=x+','+y; if (!state.board[k]) { state.board[k]={id,star:1}; placed=true; break; } } if(placed) break; } }
+    if (!placed) state.bench.push({id, star:1});
+    tryMerge(id, 1);
+  }
+  function buyXPQuiet() {
+    if (state.gold < XP_COST) return;
+    state.gold -= XP_COST; state.xp += 1 + (state.pet==='p4'?0.3:0);
+    while (state.xp >= XP_PER_LEVEL) { state.xp -= XP_PER_LEVEL; state.playerLevel++; }
+  }
+
   // === 自动战斗 ===
   function autoBattle() {
     // 买5个单位
@@ -599,6 +735,6 @@
     if (state.wave === 1 && state.totalWaves === 0) { toast('💡先买5个单位→开始战斗', '💡'); }
   }
 
-  window._ac = { buyUnit, buyXP, toggleLock, startBattle, autoBattle, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
+  window._ac = { buyUnit, buyXP, toggleLock, startBattle, autoBattle, simulateBattle, fastAutoPlay, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
   document.addEventListener('DOMContentLoaded', function() { init(); setTimeout(showHint, 1000); });
 })();
