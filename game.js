@@ -425,7 +425,7 @@
     for (let i=0; i<SHOP_SIZE; i++) { const id=state.shop[i]; html+=`<div class="shop-slot ${id?'':'empty'}">`; if (id) { const d=UNITS[id]; html+=`<div class="shop-unit cost-${d.cost}" onclick="window._ac.buyUnit(${i})"><span class="unit-emoji">${d.emoji}</span><span class="unit-name">${d.name}</span><span class="unit-cost">${d.cost}💰</span></div>`; } else html+=`<div class="shop-unit empty"><span class="unit-emoji">✕</span></div>`; html+='</div>'; }
     const nl=getLevel(state.wave);
     const nd=nl?`⚔️ 第${nl.wave}波${nl.isBoss?'👑':''}(${nl.enemies.length}敌)`:'🏆 通关';
-    html+=`</div><div class="shop-actions"><button id="refresh-btn" class="action-btn" onclick="window._ac.refreshShopManual()">🔄${REFRESH_COST}💰</button><button id="battle-btn" class="battle-btn" onclick="window._ac.startBattle()">${nd}</button></div>`;
+    html+=`</div><div class="shop-actions"><button id="refresh-btn" class="action-btn" onclick="window._ac.refreshShopManual()">🔄${REFRESH_COST}💰</button><button id="auto-btn" class="auto-btn" onclick="window._ac.autoBattle()">🤖自动</button><button id="battle-btn" class="battle-btn" onclick="window._ac.startBattle()">${nd}</button></div>`;
     el.innerHTML=html;
   }
   function refreshShopManual() { if (state.gold<REFRESH_COST) { toast('💰不足！'); return; } initAudio(); sfx.click(); state.gold-=REFRESH_COST; refreshShop(); saveState(); render(); }
@@ -583,6 +583,22 @@
     saveState(); render(); showSystems('equip');
   }
 
-  window._ac = { buyUnit, buyXP, toggleLock, startBattle, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
-  document.addEventListener('DOMContentLoaded', init);
+
+  // === 自动战斗 ===
+  function autoBattle() {
+    // 买5个单位
+    for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= UNITS[state.shop[i]].cost) buyUnit(i); }
+    // 刷新1次再买
+    if (state.gold >= REFRESH_COST + 1) { state.gold -= REFRESH_COST; refreshShop(); saveState(); render(); for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= UNITS[state.shop[i]].cost) buyUnit(i); } }
+    // 开始战斗
+    if (Object.keys(state.board).length > 0) startBattle();
+    else toast('棋盘无单位，无法开始！');
+  }
+  // === 新手提示 ===
+  function showHint() {
+    if (state.wave === 1 && state.totalWaves === 0) { toast('💡先买5个单位→开始战斗', '💡'); }
+  }
+
+  window._ac = { buyUnit, buyXP, toggleLock, startBattle, autoBattle, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
+  document.addEventListener('DOMContentLoaded', function() { init(); setTimeout(showHint, 1000); });
 })();
