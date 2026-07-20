@@ -40,7 +40,7 @@
   }
   function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {} }
 
-  function getMaxBoard() { return state.playerLevel + 2; }
+  function getMaxBoard() { return Math.min(state.playerLevel + 2, 9); }
   function canPlaceOnBoard() { return Object.keys(state.board).length < getMaxBoard(); }
   function getShopOdds() { return SHOP_ODDS[Math.min(state.playerLevel, 10)] || SHOP_ODDS[10]; }
   function rollUnit() {
@@ -647,22 +647,66 @@
     var count = 0;
     function next() {
       if (state.wave > targetWave || count > 1000) { _fastMode = false; render(); toast('批量完成: 到达W'+state.wave); return; }
-      // 买5个单位
-      for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= UNITS[state.shop[i]].cost) buyUnitQuiet(i); }
-      // 有钱买经验(留3金)
-      while (state.gold >= XP_COST + 3) { buyXPQuiet(); }
-      // 没单位就刷新
-      if (Object.keys(state.board).length === 0 && state.bench.length === 0) {
+      
+      // === 智能策略 ===
+      // 1. 刷新商店2次找高费单位
+      for (let refresh = 0; refresh < 2; refresh++) {
         if (state.gold >= REFRESH_COST) { state.gold -= REFRESH_COST; refreshShop(); }
+        // 买所有能买得起的单位
+        for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= UNITS[state.shop[i]].cost) buyUnitQuiet(i); }
       }
-      // 从备战席放到棋盘
+      
+      // 2. 从备战席放到棋盘（优先高星）
       while (state.bench.length > 0 && canPlaceOnBoard()) {
-        for (let y=4; y<8; y++) for (let x=0; x<BOARD_W; x++) { const k=x+','+y; if (!state.board[k]) { state.board[k] = state.bench.pop(); break; } }
+        // 找最高星的放棋盘
+        let maxIdx = 0, maxStar = -1;
+        for (let i = 0; i < state.bench.length; i++) { if (state.bench[i].star > maxStar) { maxStar = state.bench[i].star; maxIdx = i; } }
+        const u = state.bench[maxIdx];
+        let placed = false;
+        for (let y=4; y<8; y++) for (let x=0; x<BOARD_W; x++) { const k=x+','+y; if (!state.board[k]) { state.board[k] = u; placed = true; break; } } if (placed) break;
+        if (placed) state.bench.splice(maxIdx, 1); else break;
       }
-      if (Object.keys(state.board).length === 0) { // 还是没单位，强制战斗
-        state.gold += 7; // 保底金币
+      
+      // 3. 连败保护：每5波送一个更高星的单位（早期触发）
+      if (state.loseStreak >= 5 && state.loseStreak % 5 === 0) {
+        const giftStar = 3 + Math.floor(state.loseStreak / 5) - 1;
+        const boardIds = Object.values(state.board).map(u => u.id);
+        if (boardIds.length > 0) {
+          let minKey = null, minStar = 99;
+          for (const [key, u] of Object.entries(state.board)) {
+            if (u.star < minStar) { minStar = u.star; minKey = key; }
+          }
+          if (minKey) state.board[minKey].star = Math.max(state.board[minKey].star, giftStar);
+        }
       }
-      // 即时战斗
+      
+      // 4. 自动装备：把背包装备装到棋盘单位
+      var eqChanged = false;
+      while (state.inventory.length > 0) {
+        const eId = state.inventory[0];
+        // 找一个没有该槽位装备的棋盘单位
+        let bestKey = null, bestStar = -1;
+        for (const [key, u] of Object.entries(state.board)) {
+          if (u.star > bestStar) { bestStar = u.star; bestKey = key; }
+        }
+        if (!bestKey) break;
+        if (!state.equipped[bestKey]) state.equipped[bestKey] = {};
+        const eq = EQUIPMENT[eId];
+        let slot = eq.type;
+        if (!state.equipped[bestKey][slot]) { state.equipped[bestKey][slot] = eId; state.inventory.shift(); eqChanged = true; }
+        else { break; } // 槽位已占用，不再装备
+      }
+      
+      // 5. 宝石自动合成
+      for (const [color, g] of Object.entries(GEM_TYPES)) {
+        const ct = state.gems[color] || 0;
+        const mt = g.mergeNeed || 3;
+        if (ct >= mt) { state.gems[color] = ct - mt; state.gems[color+'_level'] = (state.gems[color+'_level']||0) + 1; }
+      }
+      
+      if (Object.keys(state.board).length === 0) { state.gold += 7; }
+      
+      // 6. 即时战斗
       const level = getLevel(state.wave);
       if (!level) { _fastMode = false; render(); return; }
       simulateBattle(state.board, level.enemies, (result) => {
@@ -686,12 +730,12 @@
           if (Math.random() < 0.5) { const drop = rollEquip(); if (drop) state.inventory.push(drop); }
         }
         if (state.wave % 10 === 0) { state.diamonds = (state.diamonds||0) + 1; }
-        state.xp = (state.xp||0) + (result.won ? 2 : 1);
+        // XP: 每波+1，不区分胜负（防止等级通胀）
+        state.xp = (state.xp||0) + 1;
         while (state.xp >= XP_PER_LEVEL) { state.xp -= XP_PER_LEVEL; state.playerLevel++; }
         state.wave++; state.totalWaves = Math.max(state.totalWaves||0, state.wave-1);
-        // 卖掉备战席多余的1星（腾空间）
-        while (state.bench.length > BENCH_SIZE - 3) {
-          // 找最低星的卖
+        // 卖掉备战席多余的1星
+        while (state.bench.length > 5) {
           let minIdx = 0, minStar = 99;
           for (let i = 0; i < state.bench.length; i++) { if (state.bench[i].star < minStar) { minStar = state.bench[i].star; minIdx = i; } }
           const u = state.bench[minIdx]; if (u) state.gold += Math.floor(UNITS[u.id].cost * Math.pow(3, u.star-1) * 0.7);
@@ -706,6 +750,8 @@
   function buyUnitQuiet(idx) {
     const id = state.shop[idx]; if (!id) return;
     const cost = UNITS[id].cost; if (state.gold < cost) return;
+    // 在 fastAutoPlay 中优先买3费以上单位（更高价值）
+    if (_fastMode && cost < 3 && state.wave > 10) return;
     if (state.bench.length >= BENCH_SIZE && Object.keys(state.board).length >= getMaxBoard()) return;
     state.gold -= cost; state.shop[idx] = null;
     if (!state.discovered.includes(id)) state.discovered.push(id);
@@ -735,6 +781,6 @@
     if (state.wave === 1 && state.totalWaves === 0) { toast('💡先买5个单位→开始战斗', '💡'); }
   }
 
-  window._ac = { buyUnit, buyXP, toggleLock, startBattle, autoBattle, simulateBattle, fastAutoPlay, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
+  window._ac = { _getState: () => state, buyUnit, buyXP, toggleLock, startBattle, autoBattle, simulateBattle, fastAutoPlay, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
   document.addEventListener('DOMContentLoaded', function() { init(); setTimeout(showHint, 1000); });
 })();
