@@ -154,10 +154,10 @@ function generateLevel(wave) {
     : Math.min(9, 2 + Math.floor(wave/3));
   
   // 金币奖励递增
-  const goldReward = 6 + Math.floor(wave * 1.5);
+  const goldReward = 6 + Math.floor(wave * 2);
   
   // 敌人星级：每10波+1星
-  const baseStar = Math.min(3, 1 + Math.floor((wave-1) / 10));
+  const baseStar = Math.min(5, 1 + Math.floor((wave-1) / 30));
   
   // 敌人费用池：随波次提高
   let costPool;
@@ -179,7 +179,7 @@ function generateLevel(wave) {
     if (candidates.length === 0) continue;
     const id = candidates[Math.floor(Math.random() * candidates.length)];
     // 敌人属性缩放：每波+5%
-    const scale = 1 + (wave - 1) * 0.05;
+    const scale = 1 + (wave - 1) * 0.01;
     const star = isBoss ? Math.min(3, baseStar + 1) : baseStar;
     enemies.push({id, star, pos:[2 + (i % 4), Math.floor(i/4) % 2], scale});
   }
