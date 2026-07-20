@@ -337,6 +337,8 @@
         const lg = 7+lb+it; state.gold += lg; toast(`失败...+${lg}金（继续推进）`, '💀'); sfx.fail();
       }
       if (state.wave % 10 === 0) { state.diamonds = (state.diamonds||0) + 1; toast(`通关${state.wave}波! 奖励1💎`, '🎁'); }
+      // 胜利自动+1经验
+      state.xp = (state.xp||0) + (result.won ? 2 : 1); while (state.xp >= XP_PER_LEVEL) { state.xp -= XP_PER_LEVEL; state.playerLevel++; }
       state.wave++; state.totalWaves = Math.max(state.totalWaves||0, state.wave-1);
       refreshShop(); saveState(); render();
     });
