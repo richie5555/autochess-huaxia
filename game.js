@@ -220,7 +220,7 @@
     overlay.classList.remove('hidden');
     canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
     const cw = canvas.width/8, ch = canvas.height/8;
-    battle = {all, player, enemy, tick:0, maxTick:600, done:false, callback, cw, ch, synergies, overlay, canvas, info, lastTime:0};
+    battle = {all, player, enemy, tick:0, maxTick:1800, done:false, callback, cw, ch, synergies, overlay, canvas, info, lastTime:0};
     
     setTimeout(frame, 16);
   }
@@ -595,7 +595,7 @@
     applySynergyBuffs(player, synergies); applySynergyBuffs(enemy, getSynergiesFromUnits(enemyUnits));
     if (state.pet==='p5') for (const p of player) p.revivePct = 0.3;
     const all = [...player, ...enemy];
-    let tick = 0; const maxTick = 600;
+    let tick = 0; const maxTick = 1800;
     while (tick < maxTick) {
       tick++;
       for (const u of all) {
