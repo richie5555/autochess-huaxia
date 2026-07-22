@@ -19,6 +19,7 @@
       enhance: {}, // {unitKey: level}
       enchant: {}, // {unitKey: enchantId}
       enchantScrolls: 0,
+      redeemedCodes: [],
     };
   }
   function loadState() {
@@ -34,6 +35,7 @@
         if (!state.enhance) state.enhance = {};
         if (!state.enchant) state.enchant = {};
         if (state.enchantScrolls === undefined) state.enchantScrolls = 0;
+        if (!state.redeemedCodes) state.redeemedCodes = [];
         if (!state.gems) state.gems = {red:0, blue:0, green:0, yellow:0, purple:0};
         if (!state.equipped) state.equipped = {};
         if (!state.gemSlots) state.gemSlots = {};
@@ -885,11 +887,29 @@
     if (Object.keys(state.board).length > 0) startBattle();
     else toast('棋盘无单位，无法开始！');
   }
+  // === 兑换码 ===
+  function redeemCode(code) {
+    code = (code||'').trim().toLowerCase();
+    if (!code) { toast('请输入兑换码'); return; }
+    if (state.redeemedCodes.includes(code)) { toast('该兑换码已使用过'); return; }
+    var reward = REDEEM_CODES[code];
+    if (!reward) { toast('兑换码无效'); sfx.fail(); return; }
+    if (reward.gold) state.gold += reward.gold;
+    if (reward.diamonds) state.diamonds = (state.diamonds||0) + reward.diamonds;
+    if (reward.enchScrolls) state.enchantScrolls = (state.enchantScrolls||0) + reward.enchScrolls;
+    if (reward.gems) { for (var color in reward.gems) { state.gems[color] = (state.gems[color]||0) + reward.gems[color]; } }
+    state.redeemedCodes.push(code);
+    saveState(); render();
+    sfx.success();
+    toast(reward.name+'：'+reward.desc, '🎁');
+    showSystems('redeem');
+  }
+
   // === 新手提示 ===
   function showHint() {
     if (state.wave === 1 && state.totalWaves === 0) { toast('💡先买5个单位→开始战斗', '💡'); }
   }
 
-  window._ac = { _getState: () => state, buyUnit, buyXP, toggleLock, startBattle, autoBattle, simulateBattle, fastAutoPlay, unbenchUnit, placeUnitAuto, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
+  window._ac = { _getState: () => state, buyUnit, buyXP, toggleLock, startBattle, autoBattle, simulateBattle, fastAutoPlay, unbenchUnit, placeUnitAuto, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem, redeemCode };
   document.addEventListener('DOMContentLoaded', function() { init(); setTimeout(showHint, 1000); });
 })();
