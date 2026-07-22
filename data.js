@@ -281,3 +281,17 @@ const DIAMOND_SHOP = {
 // 稀有度6=神话, 7=传说(用于颜色)
 const RARITY_COLORS_V5 = {1:'#aaa',2:'#4a9',3:'#4af',4:'#c4f',5:'#f80',6:'#f0f',7:'#ff0'};
 const RARITY_NAMES_V5 = {1:'普通',2:'精良',3:'稀有',4:'史诗',5:'传说',6:'神话',7:'神圣'};
+
+
+// === 兑换码 ===
+const REDEEM_CODES = {
+  // 通用码
+  'huaxia666':   { name:'新手大礼包', gold:500, diamonds:5, desc:'500金+5钻石' },
+  'huaxia888':   { name:'进阶礼包',   gold:1000, diamonds:10, enchScrolls:3, desc:'1000金+10钻石+3附魔卷轴' },
+  'huaxia999':   { name:'豪华礼包',   gold:2000, diamonds:20, enchScrolls:5, desc:'2000金+20钻石+5附魔卷轴' },
+  'richie555':   { name:'开发者礼包', gold:5000, diamonds:50, enchScrolls:10, desc:'5000金+50钻石+10附魔卷轴' },
+  'tianxia':     { name:'天下无敌',   gold:3000, diamonds:30, gems:{red:3,blue:3,green:3,yellow:3,purple:3}, desc:'3000金+30钻石+各色宝石x3' },
+  'kaifu':       { name:'开服大礼',   gold:800, diamonds:8, desc:'800金+8钻石' },
+  // 节日码（可自行扩展）
+  'spring2025':  { name:'新春礼包',   gold:1500, diamonds:15, enchScrolls:5, desc:'1500金+15钻石+5附魔卷轴' },
+};
