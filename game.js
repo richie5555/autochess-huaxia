@@ -61,6 +61,12 @@
   }
   function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {} }
 
+  // 统一单位查找：先查普通单位，再查钻石商店单位
+  function getUnitDef(id) {
+    if (UNITS[id]) return UNITS[id];
+    if (DIAMOND_SHOP && DIAMOND_SHOP.units && DIAMOND_SHOP.units[id]) return DIAMOND_SHOP.units[id];
+    return null;
+  }
   function getMaxBoard() { return Math.min(state.playerLevel + 2, 9); }
   function canPlaceOnBoard() { return Object.keys(state.board).length < getMaxBoard(); }
   function getShopOdds() { return SHOP_ODDS[Math.min(state.playerLevel, 10)] || SHOP_ODDS[10]; }
@@ -86,7 +92,7 @@
   function buyUnit(idx) {
     const id = state.shop[idx];
     if (!id) { toast('已购买'); return; }
-    const cost = UNITS[id].cost;
+    const cost = getUnitDef(id).cost;
     if (state.gold < cost) { toast('💰金币不足！'); sfx.fail(); return; }
     if (state.bench.length >= BENCH_SIZE && Object.keys(state.board).length >= getMaxBoard()) { toast('备战席和棋盘都满了！'); return; }
     state.gold -= cost; state.shop[idx] = null;
@@ -108,7 +114,7 @@
       }
       if (removed < MERGE_NEED) { for (const [key, val] of Object.entries(state.board)) { if (removed >= MERGE_NEED) break; if (val.id === id && val.star === star) { delete state.board[key]; removed++; } } }
       const newStar = star + 1;
-      state.bench.push({id, star: newStar}); toast(`${UNITS[id].emoji} ${UNITS[id].name} 升至${newStar}星！`, '⭐'); sfx.discover(); tryMerge(id, newStar);
+      state.bench.push({id, star: newStar}); toast(`${getUnitDef(id).emoji} ${getUnitDef(id).name} 升至${newStar}星！`, '⭐'); sfx.discover(); tryMerge(id, newStar);
       return true;
     }
     return false;
@@ -123,7 +129,7 @@
     let refund = 0;
     if (fromBoard) {
       const u = state.board[key]; if (!u) return;
-      refund = Math.floor(UNITS[u.id].cost * Math.pow(3, u.star - 1) * 0.7);
+      refund = Math.floor((getUnitDef(u.id)||{cost:1}).cost * Math.pow(3, u.star - 1) * 0.7);
       // 退回装备
       const eq = state.equipped[key];
       if (eq) { for (const slot of EQUIP_SLOTS) { if (eq[slot]) state.inventory.push(eq[slot]); } delete state.equipped[key]; }
@@ -132,7 +138,7 @@
       // 备战席卖出
       const idx = key;
       const u = state.bench[idx]; if (!u) return;
-      refund = Math.floor(UNITS[u.id].cost * Math.pow(3, u.star - 1) * 0.7);
+      refund = Math.floor((getUnitDef(u.id)||{cost:1}).cost * Math.pow(3, u.star - 1) * 0.7);
       state.bench.splice(idx, 1);
     }
     state.gold += refund; saveState(); render();
@@ -164,7 +170,7 @@
     for (const [key, unit] of Object.entries(board)) {
       if (seen.has(unit.id + unit.star)) continue;
       seen.add(unit.id + unit.star);
-      const def = UNITS[unit.id];
+      const def = getUnitDef(unit.id); if (!def) return {hp:0,maxHp:0,atk:0,range:0,atkSpd:0,armor:0,mr:0,skill:{},emoji:'❓',name:'未知',star:1,cost:1};
       raceCount[def.race] = (raceCount[def.race]||0) + 1;
       jobCount[def.job] = (jobCount[def.job]||0) + 1;
     }
@@ -182,7 +188,7 @@
   function getSynergiesFromUnits(units) { const fb = {}; units.forEach((u,i) => fb[i] = u); return getSynergies(fb); }
 
   function calcStats(unit, key) {
-    const def = UNITS[unit.id];
+    const def = getUnitDef(unit.id); if (!def) return {hp:0,maxHp:0,atk:0,range:0,atkSpd:0,armor:0,mr:0,skill:{},emoji:'❓',name:'未知',star:1,cost:1};
     const starMul = unit.star <= 1 ? 1 : unit.star === 2 ? 1.8 : 3 * Math.pow(1.5, unit.star - 3);
     let hp = def.base.hp * starMul, atk = def.base.atk * starMul;
     let range = def.base.range, atkSpd = def.base.atkSpd;
@@ -413,7 +419,7 @@
   }
   function renderBoard() {
     const el=document.getElementById('board'); if(!el) return; let html='';
-    for (let y=0; y<8; y++) for (let x=0; x<BOARD_W; x++) { const k=`${x},${y}`; const u=state.board[k]; const ps=y>=4; const cls=`cell ${ps?'player-side':'enemy-side'} ${u?'occupied':''}`; html+=`<div class="${cls}" data-key="${k}">`; if (u) { const d=UNITS[u.id]; const eq=state.equipped[k]; const ei=eq?[eq.weapon,eq.armor,eq.accessory].filter(Boolean).map(id=>EQUIPMENT[id]?.emoji||'').join(''):''; const enh=state.enhance[k]||0; const ench=state.enchant[k]; const enchE=ench&&ENCHANTS[ench]?ENCHANTS[ench].emoji:''; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}${enh>0?`+${enh}`:''}</span>${ei?`<span class="unit-eq">${ei}${enchE}</span>`:''}`; } html+='</div>'; }
+    for (let y=0; y<8; y++) for (let x=0; x<BOARD_W; x++) { const k=`${x},${y}`; const u=state.board[k]; const ps=y>=4; const cls=`cell ${ps?'player-side':'enemy-side'} ${u?'occupied':''}`; html+=`<div class="${cls}" data-key="${k}">`; if (u) { const d=getUnitDef(u.id); if(!d) continue; const eq=state.equipped[k]; const ei=eq?[eq.weapon,eq.armor,eq.accessory].filter(Boolean).map(id=>EQUIPMENT[id]?.emoji||'').join(''):''; const enh=state.enhance[k]||0; const ench=state.enchant[k]; const enchE=ench&&ENCHANTS[ench]?ENCHANTS[ench].emoji:''; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}${enh>0?`+${enh}`:''}</span>${ei?`<span class="unit-eq">${ei}${enchE}</span>`:''}`; } html+='</div>'; }
     el.innerHTML=html;
     el.querySelectorAll('.cell.occupied').forEach(c => {
       c.onclick=()=>{ initAudio(); sfx.click(); showUnitInfo('board', c.dataset.key); };
@@ -424,11 +430,11 @@
     let u, d, stats, eq={}, enh=0, ench=null;
     if (source==='bench') {
       u = state.bench[key]; if (!u) return;
-      d = UNITS[u.id]; if (!d) return;
+      d = getUnitDef(u.id); if (!d) return;
       stats = calcStats(u, null);
     } else {
       u = state.board[key]; if (!u) return;
-      d = UNITS[u.id]; if (!d) return;
+      d = getUnitDef(u.id); if (!d) return;
       stats = calcStats(u, key);
       eq = state.equipped[key]||{};
       enh = state.enhance[key]||0;
@@ -474,7 +480,7 @@
   function renderBench() {
     const el=document.getElementById('bench'); if(!el) return;
     let html=`<div class="bench-label">备战席 ${state.bench.length}/${BENCH_SIZE}</div><div class="bench-slots">`;
-    for (let i=0; i<BENCH_SIZE; i++) { const u=state.bench[i]; html+=`<div class="bench-slot ${u?'occupied':''}" data-idx="${i}">`; if (u) { const d=UNITS[u.id]; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}</span><span class="unit-cost">${d.cost}💰</span>`; } html+='</div>'; }
+    for (let i=0; i<BENCH_SIZE; i++) { const u=state.bench[i]; html+=`<div class="bench-slot ${u?'occupied':''}" data-idx="${i}">`; if (u) { const d=getUnitDef(u.id); if(!d) continue; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}</span><span class="unit-cost">${d.cost}💰</span>`; } html+='</div>'; }
     el.innerHTML=html+'</div>';
     el.querySelectorAll('.bench-slot.occupied').forEach(s => {
       s.onclick=()=>{ initAudio(); sfx.click(); showUnitInfo('bench', parseInt(s.dataset.idx)); };
@@ -484,7 +490,7 @@
     const el=document.getElementById('shop'); if(!el) return;
     const odds=getShopOdds();
     let html=`<div class="shop-header"><span>商店(${Object.keys(state.board).length}/${getMaxBoard()})</span><span class="odds">${odds.map((p,i)=>`${i+1}费${p}%`).join(' ')}</span></div><div class="shop-slots">`;
-    for (let i=0; i<SHOP_SIZE; i++) { const id=state.shop[i]; html+=`<div class="shop-slot ${id?'':'empty'}">`; if (id) { const d=UNITS[id]; html+=`<div class="shop-unit cost-${d.cost}" onclick="window._ac.buyUnit(${i})"><span class="unit-emoji">${d.emoji}</span><span class="unit-name">${d.name}</span><span class="unit-cost">${d.cost}💰</span></div>`; } else html+=`<div class="shop-unit empty"><span class="unit-emoji">✕</span></div>`; html+='</div>'; }
+    for (let i=0; i<SHOP_SIZE; i++) { const id=state.shop[i]; html+=`<div class="shop-slot ${id?'':'empty'}">`; if (id) { const d=getUnitDef(id); html+=`<div class="shop-unit cost-${d.cost}" onclick="window._ac.buyUnit(${i})"><span class="unit-emoji">${d.emoji}</span><span class="unit-name">${d.name}</span><span class="unit-cost">${d.cost}💰</span></div>`; } else html+=`<div class="shop-unit empty"><span class="unit-emoji">✕</span></div>`; html+='</div>'; }
     const nl=getLevel(state.wave);
     const nd=nl?`⚔️ 第${nl.wave}波${nl.isBoss?'👑':''}(${nl.enemies.length}敌)`:'🏆 通关';
     html+=`</div><div class="shop-actions"><button id="refresh-btn" class="action-btn" onclick="window._ac.refreshShopManual()">🔄${REFRESH_COST}💰</button><button id="auto-btn" class="auto-btn" onclick="window._ac.autoBattle()">🤖自动</button><button id="battle-btn" class="battle-btn" onclick="window._ac.startBattle()">${nd}</button></div>`;
@@ -519,7 +525,7 @@
         }
         html+='<h3>单位装备</h3>';
         for (const [key,u] of Object.entries(state.board)) {
-          const d=UNITS[u.id]; const eq=state.equipped[key]||{};
+          const d=getUnitDef(u.id); if(!d) continue; const eq=state.equipped[key]||{};
           html+=`<div class="equip-unit-row"><span>${d.emoji}${d.name}${'★'.repeat(u.star)}</span>`;
           for (const slot of EQUIP_SLOTS) {
             const eId=eq[slot];
@@ -532,13 +538,13 @@
     else if (tab==='pet') { if (state.wave<PET_UNLOCK_WAVE) html+=`<p class="empty-text">第${PET_UNLOCK_WAVE}波解锁</p>`; else { html+='<div class="pet-grid">'; for (const [id,p] of Object.entries(PETS)) { const ul=state.petUnlocked.includes(id); const ac=state.pet===id; html+=`<div class="pet-item ${ac?'active':''}" ${ul||p.cost===0?`onclick="window._ac.unlockPet('${id}')"`:''}><span>${p.emoji}</span><span>${p.name}</span><span>${p.skill.desc}</span>${ul?`<span>${ac?'装备中':'点击装备'}</span>`:`<span>${p.cost}💰</span>`}</div>`; } html+='</div>'; } }
     else if (tab==='wing') { if (state.wing<WING_UNLOCK_WAVE) html+=`<p class="empty-text">第${WING_UNLOCK_WAVE}波解锁</p>`; else { html+='<div class="wing-grid">'; for (const [id,w] of Object.entries(WINGS)) { const ul=state.wingUnlocked.includes(id); const ac=state.wing===id; html+=`<div class="wing-item ${ac?'active':''}" ${ul||w.cost===0?`onclick="window._ac.unlockWing('${id}')"`:''}><span>${w.emoji||'❌'}</span><span>${w.name}</span><span>${w.skill.desc}</span>${ul?`<span>${ac?'装备中':'点击装备'}</span>`:`<span>${w.cost}💰</span>`}</div>`; } html+='</div>'; } }
     else if (tab==='mount') { if (state.wave<MOUNT_UNLOCK_WAVE) html+=`<p class="empty-text">第${MOUNT_UNLOCK_WAVE}波解锁坐骑</p>`; else { html+='<div class="mount-grid">'; for (const [id,m] of Object.entries(MOUNTS)) { const ul=state.mountUnlocked.includes(id); const ac=state.mount===id; html+=`<div class="mount-item ${ac?'active':''}" ${ul||m.cost===0?`onclick="window._ac.unlockMount('${id}')"`:''}><span>${m.emoji}</span><span>${m.name}</span><span>${m.skill.desc}</span>${ul?`<span>${ac?'装备中':'点击装备'}</span>`:`<span>${m.cost}💰</span>`}</div>`; } html+='</div>'; } }
-    else if (tab==='enhance') { html+='<h3>装备强化</h3><p class="hint">选择棋盘上的单位进行强化，最高+9</p>'; for (const [key,u] of Object.entries(state.board)) { const d=UNITS[u.id]; const lv=state.enhance[key]||0; const cost=lv<ENHANCE_MAX?ENHANCE_COSTS[lv]:0; html+=`<div class="enhance-row"><span>${d.emoji}${d.name}${'★'.repeat(u.star)} +${lv}</span>${lv<ENHANCE_MAX?`<button class="enhance-btn" onclick="window._ac.enhanceUnit('${key}')">强化${cost}💰</button>`:'<span class="max-tag">已满级</span>'}</div>`; } }
-    else if (tab==='enchant') { html+='<h3>附魔系统</h3>'; html+=`<p class="hint">附魔卷轴: ${state.enchantScrolls||0} | 消耗: ${ENCHANT_COST}💰+1卷轴</p>`; for (const [key,u] of Object.entries(state.board)) { const d=UNITS[u.id]; const ench=state.enchant[key]||'none'; const enchName=ENCHANTS[ench]?ENCHANTS[ench].name:'无'; const enchE=ENCHANTS[ench]?ENCHANTS[ench].emoji:''; html+=`<div class="enchant-row"><span>${d.emoji}${d.name} ${enchE}${enchName}</span><button class="enchant-btn" onclick="window._ac.enchantUnit('${key}')">附魔(${ENCHANT_COST}💰+📜)</button></div>`; } }
+    else if (tab==='enhance') { html+='<h3>装备强化</h3><p class="hint">选择棋盘上的单位进行强化，最高+9</p>'; for (const [key,u] of Object.entries(state.board)) { const d=getUnitDef(u.id); if(!d) continue; const lv=state.enhance[key]||0; const cost=lv<ENHANCE_MAX?ENHANCE_COSTS[lv]:0; html+=`<div class="enhance-row"><span>${d.emoji}${d.name}${'★'.repeat(u.star)} +${lv}</span>${lv<ENHANCE_MAX?`<button class="enhance-btn" onclick="window._ac.enhanceUnit('${key}')">强化${cost}💰</button>`:'<span class="max-tag">已满级</span>'}</div>`; } }
+    else if (tab==='enchant') { html+='<h3>附魔系统</h3>'; html+=`<p class="hint">附魔卷轴: ${state.enchantScrolls||0} | 消耗: ${ENCHANT_COST}💰+1卷轴</p>`; for (const [key,u] of Object.entries(state.board)) { const d=getUnitDef(u.id); if(!d) continue; const ench=state.enchant[key]||'none'; const enchName=ENCHANTS[ench]?ENCHANTS[ench].name:'无'; const enchE=ENCHANTS[ench]?ENCHANTS[ench].emoji:''; html+=`<div class="enchant-row"><span>${d.emoji}${d.name} ${enchE}${enchName}</span><button class="enchant-btn" onclick="window._ac.enchantUnit('${key}')">附魔(${ENCHANT_COST}💰+📜)</button></div>`; } }
     else if (tab==='shop') { html+='<h3>💎钻石商店</h3>'; html+=`<p class="hint">当前钻石: ${state.diamonds||0}💎 | Boss波掉落 | 每10波送1💎</p>`; html+='<h4>神话物种(1💎)</h4><div class="shop-dia-grid">'; for (const [id,u] of Object.entries(DIAMOND_SHOP.units)) { html+=`<div class="shop-dia-item" onclick="window._ac.buyDiamondUnit('${id}')"><span>${u.emoji||'❓'}</span><span>${u.name}</span><span class="tier-${u.tier}">${u.tier==='myth'?'神话':'传说'}</span><span>${u.cost}💎</span></div>`; } html+='</div>'; html+='<h4>神话装备</h4><div class="shop-dia-grid">'; for (const [id,e] of Object.entries(DIAMOND_SHOP.equipment)) { html+=`<div class="shop-dia-item" onclick="window._ac.buyDiamondEquip('${id}')"><span>${e.emoji}</span><span>${e.name}</span><span class="tier-${e.rarity>=6?'myth':'legend'}">${e.rarity>=6?'神话':'传说'}</span><span>${e.cost}💎</span></div>`; } html+='</div>'; html+='<h4>资源兑换</h4><div class="shop-dia-grid">'; for (const [id,item] of Object.entries(DIAMOND_SHOP)) { if (id.startsWith('gold')||id.startsWith('enchant')) { html+=`<div class="shop-dia-item" onclick="window._ac.buyDiamondItem('${id}')"><span>${item.emoji}</span><span>${item.name}</span><span>${item.cost}💎</span></div>`; } } html+='</div>'; }
     html+=`</div><button class="sys-close" onclick="document.getElementById('sys-modal').classList.add('hidden')">关闭</button></div>`;
     modal.innerHTML=html; modal.classList.remove('hidden');
   }
-  function selectEquipTarget(equipId) { const e=EQUIPMENT[equipId]; if(!e) return; const bk=Object.keys(state.board); if (bk.length===0) { toast('棋盘上无单位！'); return; } const modal=document.getElementById('sys-modal'); let html=`<div class="sys-modal-content"><h3>装备→${e.emoji}${e.name}</h3>`; for (const key of bk) { const u=state.board[key]; const d=UNITS[u.id]; const eq=state.equipped[key]||{}; const cu=eq[e.slot]; html+=`<div class="equip-target" onclick="window._ac.equipItem('${key}','${equipId}')">${d.emoji}${d.name}${'★'.repeat(u.star)} ${cu?`(换:${EQUIPMENT[cu].name})`:'(空)'}</div>`; } html+=`<button class="sys-close" onclick="window._ac.showSystems('equip')">返回</button></div>`; modal.innerHTML=html; }
+  function selectEquipTarget(equipId) { const e=EQUIPMENT[equipId]; if(!e) return; const bk=Object.keys(state.board); if (bk.length===0) { toast('棋盘上无单位！'); return; } const modal=document.getElementById('sys-modal'); let html=`<div class="sys-modal-content"><h3>装备→${e.emoji}${e.name}</h3>`; for (const key of bk) { const u=state.board[key]; const d=getUnitDef(u.id); if(!d) continue; const eq=state.equipped[key]||{}; const cu=eq[e.slot]; html+=`<div class="equip-target" onclick="window._ac.equipItem('${key}','${equipId}')">${d.emoji}${d.name}${'★'.repeat(u.star)} ${cu?`(换:${EQUIPMENT[cu].name})`:'(空)'}</div>`; } html+=`<button class="sys-close" onclick="window._ac.showSystems('equip')">返回</button></div>`; modal.innerHTML=html; }
   function equipSlot(unitKey, slot) { const cs=state.inventory.filter(eId=>EQUIPMENT[eId].slot===slot); if (cs.length===0) { toast(`无${EQUIP_SLOTS_NAME[slot]}！`); return; } const modal=document.getElementById('sys-modal'); let html=`<div class="sys-modal-content"><h3>选${EQUIP_SLOTS_NAME[slot]}</h3>`; for (const eId of cs) { const e=EQUIPMENT[eId]; html+=`<div class="equip-target" onclick="window._ac.equipItem('${unitKey}','${eId}')">${e.emoji}${e.name} ${Object.entries(e.stats).map(([k,v])=>`${k}+${v}`).join(' ')}</div>`; } html+=`<button class="sys-close" onclick="window._ac.showSystems('equip')">返回</button></div>`; modal.innerHTML=html; }
   function init() {
     // 捕获所有 JS 错误
@@ -592,7 +598,7 @@
     if (state.gold < cost) { toast('💰金币不足！需要'+cost); return; }
     state.gold -= cost;
     state.enhance[unitKey] = lv + 1;
-    toast(`${UNITS[u.id].name} 强化至+${lv+1}！`, '⬆️');
+    toast(`${getUnitDef(u.id).name} 强化至+${lv+1}！`, '⬆️');
     sfx.discover();
     saveState(); render(); showSystems('enhance');
   }
@@ -605,7 +611,7 @@
     const enchKeys = Object.keys(ENCHANTS).filter(k => k !== 'none');
     const pick = enchKeys[Math.floor(Math.random()*enchKeys.length)];
     state.enchant[unitKey] = pick;
-    toast(`${UNITS[u.id].name} 附魔${ENCHANTS[pick].emoji}${ENCHANTS[pick].name}！`, '✨');
+    toast(`${getUnitDef(u.id).name} 附魔${ENCHANTS[pick].emoji}${ENCHANTS[pick].name}！`, '✨');
     sfx.discover();
     saveState(); render(); showSystems('enchant');
   }
@@ -756,7 +762,7 @@
       for (let refresh = 0; refresh < 2; refresh++) {
         if (state.gold >= REFRESH_COST) { state.gold -= REFRESH_COST; refreshShop(); }
         // 买所有能买得起的单位
-        for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= UNITS[state.shop[i]].cost) buyUnitQuiet(i); }
+        for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= getUnitDef(state.shop[i]).cost) buyUnitQuiet(i); }
       }
       
       // 2. 从备战席放到棋盘（优先高星）
@@ -841,7 +847,7 @@
         while (state.bench.length > 5) {
           let minIdx = 0, minStar = 99;
           for (let i = 0; i < state.bench.length; i++) { if (state.bench[i].star < minStar) { minStar = state.bench[i].star; minIdx = i; } }
-          const u = state.bench[minIdx]; if (u) state.gold += Math.floor(UNITS[u.id].cost * Math.pow(3, u.star-1) * 0.7);
+          const u = state.bench[minIdx]; if (u) state.gold += Math.floor((getUnitDef(u.id)||{cost:1}).cost * Math.pow(3, u.star-1) * 0.7);
           state.bench.splice(minIdx, 1);
         }
         count++;
@@ -852,7 +858,7 @@
   }
   function buyUnitQuiet(idx) {
     const id = state.shop[idx]; if (!id) return;
-    const cost = UNITS[id].cost; if (state.gold < cost) return;
+    const cost = getUnitDef(id).cost; if (state.gold < cost) return;
     // 在 fastAutoPlay 中优先买3费以上单位（更高价值）
     if (_fastMode && cost < 3 && state.wave > 10) return;
     if (state.bench.length >= BENCH_SIZE && Object.keys(state.board).length >= getMaxBoard()) return;
@@ -872,9 +878,9 @@
   // === 自动战斗 ===
   function autoBattle() {
     // 买5个单位
-    for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= UNITS[state.shop[i]].cost) buyUnit(i); }
+    for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= getUnitDef(state.shop[i]).cost) buyUnit(i); }
     // 刷新1次再买
-    if (state.gold >= REFRESH_COST + 1) { state.gold -= REFRESH_COST; refreshShop(); saveState(); render(); for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= UNITS[state.shop[i]].cost) buyUnit(i); } }
+    if (state.gold >= REFRESH_COST + 1) { state.gold -= REFRESH_COST; refreshShop(); saveState(); render(); for (let i = 0; i < SHOP_SIZE; i++) { if (state.shop[i] && state.gold >= getUnitDef(state.shop[i]).cost) buyUnit(i); } }
     // 开始战斗
     if (Object.keys(state.board).length > 0) startBattle();
     else toast('棋盘无单位，无法开始！');
