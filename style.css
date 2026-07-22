@@ -195,3 +195,13 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--
 /* 自动战斗按钮 */
 .auto-btn { background:linear-gradient(135deg,#3a3a3a,#5a5a5a); color:#0ff; border:1px solid #0ff; font-size:12px; padding:8px 10px; border-radius:6px; cursor:pointer; font-weight:600; flex:0 0 auto; }
 .auto-btn:active { transform:scale(0.95); }
+
+
+/* 单位属性面板操作按钮 */
+.unit-info-actions { display:flex; gap:8px; padding:10px 12px; flex-wrap:wrap; }
+.unit-info-actions button { flex:1; min-width:80px; padding:10px 8px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid; }
+.action-sell { background:linear-gradient(135deg,#3a1a1a,#5a2a2a); color:#ff6b6b; border-color:#ff6b6b; }
+.action-sell:active { transform:scale(0.95); }
+.action-unbench, .action-place { background:linear-gradient(135deg,#1a2a3a,#2a3a5a); color:#4fc3f7; border-color:#4fc3f7; }
+.action-unbench:active, .action-place:active { transform:scale(0.95); }
+.unit-info-actions .sys-close { background:linear-gradient(135deg,#2a2a2a,#3a3a3a); color:var(--text-dim); border-color:var(--border); flex:0 0 60px; }
