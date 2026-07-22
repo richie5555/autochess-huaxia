@@ -473,7 +473,7 @@
   }
   function renderBench() {
     const el=document.getElementById('bench'); if(!el) return;
-    let html=`<div class="bench-label">备战席 ${state.bench.length}/${BENCH_SIZE} <span style="float:right;color:var(--text-dim);font-size:8px">长按卖出</span></div><div class="bench-slots">`;
+    let html=`<div class="bench-label">备战席 ${state.bench.length}/${BENCH_SIZE}</div><div class="bench-slots">`;
     for (let i=0; i<BENCH_SIZE; i++) { const u=state.bench[i]; html+=`<div class="bench-slot ${u?'occupied':''}" data-idx="${i}">`; if (u) { const d=UNITS[u.id]; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}</span><span class="unit-cost">${d.cost}💰</span>`; } html+='</div>'; }
     el.innerHTML=html+'</div>';
     el.querySelectorAll('.bench-slot.occupied').forEach(s => {
@@ -541,11 +541,43 @@
   function selectEquipTarget(equipId) { const e=EQUIPMENT[equipId]; if(!e) return; const bk=Object.keys(state.board); if (bk.length===0) { toast('棋盘上无单位！'); return; } const modal=document.getElementById('sys-modal'); let html=`<div class="sys-modal-content"><h3>装备→${e.emoji}${e.name}</h3>`; for (const key of bk) { const u=state.board[key]; const d=UNITS[u.id]; const eq=state.equipped[key]||{}; const cu=eq[e.slot]; html+=`<div class="equip-target" onclick="window._ac.equipItem('${key}','${equipId}')">${d.emoji}${d.name}${'★'.repeat(u.star)} ${cu?`(换:${EQUIPMENT[cu].name})`:'(空)'}</div>`; } html+=`<button class="sys-close" onclick="window._ac.showSystems('equip')">返回</button></div>`; modal.innerHTML=html; }
   function equipSlot(unitKey, slot) { const cs=state.inventory.filter(eId=>EQUIPMENT[eId].slot===slot); if (cs.length===0) { toast(`无${EQUIP_SLOTS_NAME[slot]}！`); return; } const modal=document.getElementById('sys-modal'); let html=`<div class="sys-modal-content"><h3>选${EQUIP_SLOTS_NAME[slot]}</h3>`; for (const eId of cs) { const e=EQUIPMENT[eId]; html+=`<div class="equip-target" onclick="window._ac.equipItem('${unitKey}','${eId}')">${e.emoji}${e.name} ${Object.entries(e.stats).map(([k,v])=>`${k}+${v}`).join(' ')}</div>`; } html+=`<button class="sys-close" onclick="window._ac.showSystems('equip')">返回</button></div>`; modal.innerHTML=html; }
   function init() {
+    // 捕获所有 JS 错误
+    window.onerror = function(msg, src, line, col, err) {
+      try { var d = JSON.parse(localStorage.getItem('_ac_diag') || '[]'); d.push('ERR:'+msg+' at '+line+':'+col); localStorage.setItem('_ac_diag', JSON.stringify(d.slice(-20))); } catch(e){}
+    };
     if (!loadState()) { state=defaultState(); refreshShop(); saveState(); }
-    // 如果商店全空，刷新一次
-    if (!state.shop || state.shop.every(s => !s)) refreshShop();
-    // 如果棋盘为空且备战席为空，刷新一次（防止旧存档残留）
-    try { render(); } catch(e) { console.error('init render error:', e.message); state=defaultState(); refreshShop(); saveState(); render(); }
+    if (!state.shop || state.shop.every(function(s){return !s})) refreshShop();
+    try { render(); } catch(e) {
+      try { var d = JSON.parse(localStorage.getItem('_ac_diag') || '[]'); d.push('RENDER:'+e.message); localStorage.setItem('_ac_diag', JSON.stringify(d.slice(-20))); } catch(e2){}
+      state=defaultState(); refreshShop(); saveState(); render();
+    }
+    // 诊断：记录元素尺寸
+    setTimeout(function() {
+      try {
+        var diag = {
+          ua: navigator.userAgent.substring(0, 120),
+          vw: window.innerWidth, vh: window.innerHeight,
+          dvh: typeof CSS !== 'undefined' && CSS.supports ? CSS.supports('height', '100dvh') : 'unknown',
+          aspectRatio: typeof CSS !== 'undefined' && CSS.supports ? CSS.supports('aspect-ratio', '1') : 'unknown',
+          appH: document.getElementById('app').offsetHeight,
+          appW: document.getElementById('app').offsetWidth,
+          topbarH: document.getElementById('topbar').offsetHeight,
+          boardH: document.getElementById('board').offsetHeight,
+          boardW: document.getElementById('board').offsetWidth,
+          synH: document.getElementById('synergies').offsetHeight,
+          benchH: document.getElementById('bench').offsetHeight,
+          shopH: document.getElementById('shop').offsetHeight,
+          equipH: document.getElementById('equip').offsetHeight,
+          cells: document.querySelectorAll('.cell').length,
+          occupied: document.querySelectorAll('.cell.occupied').length,
+          benchUnits: document.querySelectorAll('.bench-slot.occupied').length,
+          shopUnits: document.querySelectorAll('.shop-unit:not(.empty)').length,
+        };
+        localStorage.setItem('_ac_diag', JSON.stringify(diag));
+      } catch(e) {
+        localStorage.setItem('_ac_diag', JSON.stringify({error: e.message}));
+      }
+    }, 500);
   }
 
   // === v5 新增函数 ===
