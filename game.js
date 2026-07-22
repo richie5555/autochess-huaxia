@@ -115,6 +115,26 @@
       state.bench.splice(idx, 1);
     }
     state.gold += refund; saveState(); render();
+    document.getElementById('sys-modal').classList.add('hidden');
+  }
+  // 下阵：棋盘单位→备战席
+  function unbenchUnit(key) {
+    const u = state.board[key]; if (!u) return;
+    if (state.bench.length >= BENCH_SIZE) { toast('备战席已满！'); return; }
+    const eq = state.equipped[key];
+    if (eq) { for (const slot of EQUIP_SLOTS) { if (eq[slot]) state.inventory.push(eq[slot]); } delete state.equipped[key]; }
+    const enh = state.enhance[key]||0, ench2 = state.enchant[key];
+    state.bench.push({...u}); delete state.board[key]; delete state.enhance[key]; delete state.enchant[key];
+    saveState(); render();
+    document.getElementById('sys-modal').classList.add('hidden');
+    toast('已下阵', '⬇️');
+  }
+  // 上阵：备战席→棋盘（自动找空位）
+  function placeUnitAuto(benchIdx) {
+    const unit = state.bench[benchIdx]; if (!unit) return;
+    if (!canPlaceOnBoard()) { toast(`上场已达上限(${getMaxBoard()})！`); return; }
+    for (let y=4; y<8; y++) for (let x=0; x<BOARD_W; x++) { const k=`${x},${y}`; if (!state.board[k]) { state.board[k]={...unit}; state.bench.splice(benchIdx,1); saveState(); render(); document.getElementById('sys-modal').classList.add('hidden'); toast('已上阵', '⬆️'); return; } }
+    toast('棋盘已满！');
   }
 
 
@@ -368,23 +388,29 @@
     for (let y=0; y<8; y++) for (let x=0; x<BOARD_W; x++) { const k=`${x},${y}`; const u=state.board[k]; const ps=y>=4; const cls=`cell ${ps?'player-side':'enemy-side'} ${u?'occupied':''}`; html+=`<div class="${cls}" data-key="${k}">`; if (u) { const d=UNITS[u.id]; const eq=state.equipped[k]; const ei=eq?[eq.weapon,eq.armor,eq.accessory].filter(Boolean).map(id=>EQUIPMENT[id]?.emoji||'').join(''):''; const enh=state.enhance[k]||0; const ench=state.enchant[k]; const enchE=ench&&ENCHANTS[ench]?ENCHANTS[ench].emoji:''; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}${enh>0?`+${enh}`:''}</span>${ei?`<span class="unit-eq">${ei}${enchE}</span>`:''}`; } html+='</div>'; }
     el.innerHTML=html;
     el.querySelectorAll('.cell.occupied').forEach(c => {
-      let pressTimer=null;
-      c.addEventListener('touchstart',()=>{ pressTimer=setTimeout(()=>{ if(confirm(`卖出 ${UNITS[state.board[c.dataset.key].id].name}?`)) sellUnit(true,c.dataset.key); pressTimer=null; },600); });
-      c.addEventListener('touchend',()=>{ if(pressTimer){clearTimeout(pressTimer);pressTimer=null; showUnitInfo(c.dataset.key);} });
-      c.onclick=()=>{ if(pressTimer!==null) return; showUnitInfo(c.dataset.key); };
+      c.onclick=()=>{ initAudio(); sfx.click(); showUnitInfo('board', c.dataset.key); };
     });
   }
-  function showUnitInfo(key) {
-    const u = state.board[key]; if (!u) return;
-    const d = UNITS[u.id]; if (!d) return;
-    const stats = calcStats(u, key);
-    const eq = state.equipped[key]||{};
-    const enh = state.enhance[key]||0;
-    const ench = state.enchant[key];
+  function showUnitInfo(source, key) {
+    // source: 'board' or 'bench'
+    let u, d, stats, eq={}, enh=0, ench=null;
+    if (source==='bench') {
+      u = state.bench[key]; if (!u) return;
+      d = UNITS[u.id]; if (!d) return;
+      stats = calcStats(u, null);
+    } else {
+      u = state.board[key]; if (!u) return;
+      d = UNITS[u.id]; if (!d) return;
+      stats = calcStats(u, key);
+      eq = state.equipped[key]||{};
+      enh = state.enhance[key]||0;
+      ench = state.enchant[key];
+    }
     const enchName = ench&&ENCHANTS[ench] ? ENCHANTS[ench].emoji+ENCHANTS[ench].name : '无';
     const syns = getSynergies(state.board).filter(s=>s.active);
     const mySyn = syns.filter(s=>{ const def=d; return (s.type==='race'&&def.race===s.key)||(s.type==='job'&&def.job===s.key); });
     const eqList = EQUIP_SLOTS.map(slot=>{ const eId=eq[slot]; return eId ? EQUIPMENT[eId].emoji+EQUIPMENT[eId].name : EQUIP_SLOTS_NAME[slot]; }).join(' ');
+    const refund = Math.floor(d.cost * Math.pow(3, u.star - 1) * 0.7);
     const modal=document.getElementById('sys-modal');
     let html=`<div class="sys-modal-content"><div class="unit-info-panel">`;
     html+=`<div class="unit-info-header"><span class="unit-info-emoji">${d.emoji}</span><span class="unit-info-name">${d.name}</span><span class="unit-info-stars">${'★'.repeat(u.star)}${enh>0?`+${enh}`:''}</span></div>`;
@@ -403,7 +429,18 @@
     html+=`<div class="unit-info-section"><h4>装备</h4><div class="equip-list-row">${eqList}</div></div>`;
     html+=`<div class="unit-info-section"><h4>附魔</h4><div>${enchName}</div></div>`;
     html+=`<div class="unit-info-section"><h4>强化</h4><div>+${enh} ${enh>0?`(HP/ATK +${(ENHANCE_BONUS[enh]?.hp_pct*100||0)}%)`:''}</div></div>`;
-    html+=`</div><button class="sys-close" onclick="document.getElementById('sys-modal').classList.add('hidden')">关闭</button></div>`;
+    // === 操作按钮 ===
+    html+=`<div class="unit-info-actions">`;
+    if (source==='board') {
+      html+=`<button class="action-sell" onclick="window._ac.sellUnit(true,'${key}')">💰卖出 (${refund}金)</button>`;
+      html+=`<button class="action-unbench" onclick="window._ac.unbenchUnit('${key}')">⬇️下阵</button>`;
+    } else {
+      html+=`<button class="action-sell" onclick="window._ac.sellUnit(false,${key})">💰卖出 (${refund}金)</button>`;
+      html+=`<button class="action-place" onclick="window._ac.placeUnitAuto(${key})">⬆️上阵</button>`;
+    }
+    html+=`<button class="sys-close" onclick="document.getElementById('sys-modal').classList.add('hidden')">关闭</button>`;
+    html+=`</div>`;
+    html+=`</div></div>`;
     modal.innerHTML=html; modal.classList.remove('hidden');
   }
   function renderBench() {
@@ -412,10 +449,7 @@
     for (let i=0; i<BENCH_SIZE; i++) { const u=state.bench[i]; html+=`<div class="bench-slot ${u?'occupied':''}" data-idx="${i}">`; if (u) { const d=UNITS[u.id]; html+=`<span class="unit-emoji">${d.emoji}</span><span class="unit-stars">${'★'.repeat(u.star)}</span><span class="unit-cost">${d.cost}💰</span>`; } html+='</div>'; }
     el.innerHTML=html+'</div>';
     el.querySelectorAll('.bench-slot.occupied').forEach(s => {
-      let pressTimer=null;
-      s.addEventListener('touchstart',()=>{ pressTimer=setTimeout(()=>{ if(confirm('卖出这个单位?')) sellUnit(false,parseInt(s.dataset.idx)); pressTimer=null; },600); });
-      s.addEventListener('touchend',()=>{ if(pressTimer){clearTimeout(pressTimer);pressTimer=null; const idx=parseInt(s.dataset.idx); for(let y=4;y<8;y++) for(let x=0;x<BOARD_W;x++) { const k=`${x},${y}`; if(!state.board[k]) { initAudio(); sfx.click(); placeUnit(idx,x,y); return; } } toast('棋盘已满！'); } });
-      s.onclick=()=>{ if(pressTimer!==null) return; const idx=parseInt(s.dataset.idx); for(let y=4;y<8;y++) for(let x=0;x<BOARD_W;x++) { const k=`${x},${y}`; if(!state.board[k]) { initAudio(); sfx.click(); placeUnit(idx,x,y); return; } } toast('棋盘已满！'); };
+      s.onclick=()=>{ initAudio(); sfx.click(); showUnitInfo('bench', parseInt(s.dataset.idx)); };
     });
   }
   function renderShop() {
@@ -781,6 +815,6 @@
     if (state.wave === 1 && state.totalWaves === 0) { toast('💡先买5个单位→开始战斗', '💡'); }
   }
 
-  window._ac = { _getState: () => state, buyUnit, buyXP, toggleLock, startBattle, autoBattle, simulateBattle, fastAutoPlay, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
+  window._ac = { _getState: () => state, buyUnit, buyXP, toggleLock, startBattle, autoBattle, simulateBattle, fastAutoPlay, unbenchUnit, placeUnitAuto, refreshShopManual, showSystems, selectEquipTarget, equipItem, equipSlot, sellEquip, decomposeOne, decomposeBySlot, decomposeAll, sellUnit, mergeGems, unlockPet, unlockWing, enhanceUnit, enchantUnit, unlockMount, buyDiamondUnit, buyDiamondEquip, buyDiamondItem };
   document.addEventListener('DOMContentLoaded', function() { init(); setTimeout(showHint, 1000); });
 })();
