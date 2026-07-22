@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>诊断</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#e6edf3;font-family:sans-serif;padding:10px;font-size:12px}
+#out{white-space:pre-wrap;word-break:break-all;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="out">正在诊断...</div>
+<script>
+var out = document.getElementById('out');
+function log(msg) { out.textContent += '\n' + msg; }
+function separator(title) { log('\n=== ' + title + ' ==='); }
+
+try {
+  separator('浏览器信息');
+  log('UA: ' + navigator.userAgent.substring(0, 200));
+  log('viewport: ' + window.innerWidth + 'x' + window.innerHeight);
+  log('dpr: ' + window.devicePixelRatio);
+
+  separator('CSS支持');
+  log('aspect-ratio: ' + (CSS.supports('aspect-ratio', '1') ? 'YES' : 'NO'));
+  log('100dvh: ' + (CSS.supports('height', '100dvh') ? 'YES' : 'NO'));
+  log('100vh: ' + (CSS.supports('height', '100vh') ? 'YES' : 'NO'));
+  log('grid: ' + (CSS.supports('display', 'grid') ? 'YES' : 'NO'));
+
+  separator('存档信息');
+  var raw = localStorage.getItem('autochess_huaxia_save_v4');
+  if (raw) {
+    var save = JSON.parse(raw);
+    log('wave: ' + save.wave);
+    log('gold: ' + save.gold);
+    log('playerLevel: ' + save.playerLevel);
+    log('board keys: ' + Object.keys(save.board || {}).join(','));
+    log('board内容: ' + JSON.stringify(save.board));
+    log('bench长度: ' + (save.bench ? save.bench.length : 'undefined'));
+    log('shop: ' + JSON.stringify(save.shop));
+    log('gems: ' + JSON.stringify(save.gems));
+    log('equipped: ' + JSON.stringify(save.equipped));
+    log('pet: ' + save.pet);
+    log('wing: ' + save.wing);
+    log('enhance: ' + JSON.stringify(save.enhance));
+    log('enchant: ' + JSON.stringify(save.enchant));
+    log('diamonds: ' + save.diamonds);
+    log('mount: ' + save.mount);
+    log('discovered长度: ' + (save.discovered ? save.discovered.length : 'undefined'));
+    log('battleLog长度: ' + (save.battleLog ? save.battleLog.length : 'undefined'));
+    log('inventory长度: ' + (save.inventory ? save.inventory.length : 'undefined'));
+    log('enchantScrolls: ' + save.enchantScrolls);
+    log('totalWaves: ' + save.totalWaves);
+
+    separator('存档缺失字段');
+    var defaults = ['wave','gold','playerLevel','xp','winStreak','loseStreak','board','bench','shop','lockedShop','discovered','battleLog','inventory','gems','equipped','gemSlots','pet','petUnlocked','wing','wingUnlocked','totalWaves','diamonds','mount','mountUnlocked','enhance','enchant','enchantScrolls'];
+    for (var i = 0; i < defaults.length; i++) {
+      var f = defaults[i];
+      if (save[f] === undefined) log('⚠️ 缺失: ' + f);
+    }
+
+    separator('棋盘单位ID检查');
+    var unitIds = ['jiangshi','bingjiang','jinweishi','huolong','tuwushi','shuishen','jinshen','mujingling','mushuwang','liehuoshou','kongque','qinglong','baihu','fenghuang','zhuque','xuanwu','longwang','shushen','kunlunling','pangu','nuwa','houyi','xingtain','huangdi','chiyou','jingwei','kuafu'];
+    for (var key in save.board) {
+      var u = save.board[key];
+      log(key + ': id=' + u.id + ' star=' + u.star + (unitIds.indexOf(u.id) < 0 ? ' ⚠️未知ID!' : ' ✓'));
+    }
+  } else {
+    log('无存档');
+  }
+} catch(e) {
+  log('❌ 错误: ' + e.message);
+  log('stack: ' + e.stack);
+}
+</script>
+</body>
+</html>
