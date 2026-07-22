@@ -205,3 +205,13 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--
 .action-unbench, .action-place { background:linear-gradient(135deg,#1a2a3a,#2a3a5a); color:#4fc3f7; border-color:#4fc3f7; }
 .action-unbench:active, .action-place:active { transform:scale(0.95); }
 .unit-info-actions .sys-close { background:linear-gradient(135deg,#2a2a2a,#3a3a3a); color:var(--text-dim); border-color:var(--border); flex:0 0 60px; }
+
+
+/* 兑换码 */
+.redeem-input { display:flex; align-items:center; margin-bottom:8px; }
+.redeem-btn:active { transform:scale(0.95); }
+.redeem-list { display:flex; flex-direction:column; gap:4px; }
+.redeem-item { display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border:1px solid var(--border); border-radius:4px; background:var(--bg); font-size:11px; }
+.redeem-item.used { opacity:0.4; }
+.redeem-code { font-weight:600; color:var(--accent); }
+.redeem-desc { color:var(--text-dim); font-size:10px; }
