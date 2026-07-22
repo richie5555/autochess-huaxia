@@ -27,15 +27,36 @@
       if (s) {
         state = JSON.parse(s);
         state.wave = state.wave || 1;
-        // 初始化v5新增字段（兼容v4存档）
+        // 初始化所有可能缺失的字段（兼容旧存档）
         if (state.diamonds === undefined) state.diamonds = 0;
         if (!state.mount) state.mount = 'm0';
         if (!state.mountUnlocked) state.mountUnlocked = ['m0'];
         if (!state.enhance) state.enhance = {};
         if (!state.enchant) state.enchant = {};
+        if (state.enchantScrolls === undefined) state.enchantScrolls = 0;
+        if (!state.gems) state.gems = {red:0, blue:0, green:0, yellow:0, purple:0};
+        if (!state.equipped) state.equipped = {};
+        if (!state.gemSlots) state.gemSlots = {};
+        if (state.pet === undefined) state.pet = null;
+        if (!state.petUnlocked) state.petUnlocked = [];
+        if (!state.wing) state.wing = 'w0';
+        if (!state.wingUnlocked) state.wingUnlocked = ['w0'];
+        if (!state.discovered) state.discovered = [...Object.keys(UNITS).slice(0,5)];
+        if (!state.battleLog) state.battleLog = [];
+        if (!state.inventory) state.inventory = [];
+        if (!state.board) state.board = {};
+        if (!state.bench) state.bench = [];
+        if (!state.shop || state.shop.length === 0) { state.shop = []; for(let i=0;i<SHOP_SIZE;i++) state.shop.push(null); }
+        if (state.lockedShop === undefined) state.lockedShop = false;
+        if (state.winStreak === undefined) state.winStreak = 0;
+        if (state.loseStreak === undefined) state.loseStreak = 0;
+        if (state.playerLevel === undefined) state.playerLevel = 3;
+        if (state.xp === undefined) state.xp = 0;
+        if (state.gold === undefined) state.gold = START_GOLD;
+        if (state.totalWaves === undefined) state.totalWaves = 0;
         return true;
       }
-    } catch(e) {}
+    } catch(e) { console.error('loadState error:', e.message); }
     state = defaultState(); return false;
   }
   function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {} }
@@ -373,7 +394,14 @@
   function initAudio() { if (!audioCtx) { try { audioCtx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e) {} } }
   function tone(freq, dur, type) { if (!audioCtx) return; const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.setValueAtTime(0.1,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur); }
   function toast(msg, icon) { const t=document.getElementById('toast'); if(!t) return; t.textContent=(icon?icon+' ':'')+msg; t.classList.add('show'); clearTimeout(t._timer); t._timer=setTimeout(()=>t.classList.remove('show'),2000); }
-  function render() { renderTopBar(); renderBoard(); renderSynergies(); renderBench(); renderShop(); renderEquipBar(); }
+  function render() {
+    try { renderTopBar(); } catch(e) { console.error('renderTopBar:', e.message); }
+    try { renderBoard(); } catch(e) { console.error('renderBoard:', e.message); }
+    try { renderSynergies(); } catch(e) { console.error('renderSynergies:', e.message); }
+    try { renderBench(); } catch(e) { console.error('renderBench:', e.message); }
+    try { renderShop(); } catch(e) { console.error('renderShop:', e.message); }
+    try { renderEquipBar(); } catch(e) { console.error('renderEquipBar:', e.message); }
+  }
   function renderTopBar() {
     const el=document.getElementById('topbar'); if(!el) return;
     const it=Math.min(INTEREST_MAX,Math.floor(state.gold/INTEREST_PER));
@@ -512,7 +540,13 @@
   }
   function selectEquipTarget(equipId) { const e=EQUIPMENT[equipId]; if(!e) return; const bk=Object.keys(state.board); if (bk.length===0) { toast('棋盘上无单位！'); return; } const modal=document.getElementById('sys-modal'); let html=`<div class="sys-modal-content"><h3>装备→${e.emoji}${e.name}</h3>`; for (const key of bk) { const u=state.board[key]; const d=UNITS[u.id]; const eq=state.equipped[key]||{}; const cu=eq[e.slot]; html+=`<div class="equip-target" onclick="window._ac.equipItem('${key}','${equipId}')">${d.emoji}${d.name}${'★'.repeat(u.star)} ${cu?`(换:${EQUIPMENT[cu].name})`:'(空)'}</div>`; } html+=`<button class="sys-close" onclick="window._ac.showSystems('equip')">返回</button></div>`; modal.innerHTML=html; }
   function equipSlot(unitKey, slot) { const cs=state.inventory.filter(eId=>EQUIPMENT[eId].slot===slot); if (cs.length===0) { toast(`无${EQUIP_SLOTS_NAME[slot]}！`); return; } const modal=document.getElementById('sys-modal'); let html=`<div class="sys-modal-content"><h3>选${EQUIP_SLOTS_NAME[slot]}</h3>`; for (const eId of cs) { const e=EQUIPMENT[eId]; html+=`<div class="equip-target" onclick="window._ac.equipItem('${unitKey}','${eId}')">${e.emoji}${e.name} ${Object.entries(e.stats).map(([k,v])=>`${k}+${v}`).join(' ')}</div>`; } html+=`<button class="sys-close" onclick="window._ac.showSystems('equip')">返回</button></div>`; modal.innerHTML=html; }
-  function init() { if (!loadState()) { state=defaultState(); refreshShop(); saveState(); } render(); }
+  function init() {
+    if (!loadState()) { state=defaultState(); refreshShop(); saveState(); }
+    // 如果商店全空，刷新一次
+    if (!state.shop || state.shop.every(s => !s)) refreshShop();
+    // 如果棋盘为空且备战席为空，刷新一次（防止旧存档残留）
+    try { render(); } catch(e) { console.error('init render error:', e.message); state=defaultState(); refreshShop(); saveState(); render(); }
+  }
 
   // === v5 新增函数 ===
   function enhanceUnit(unitKey) {
