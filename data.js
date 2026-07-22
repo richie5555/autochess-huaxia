@@ -294,4 +294,5 @@ const REDEEM_CODES = {
   'kaifu':       { name:'开服大礼',   gold:800, diamonds:8, desc:'800金+8钻石' },
   // 节日码（可自行扩展）
   'spring2025':  { name:'新春礼包',   gold:1500, diamonds:15, enchScrolls:5, desc:'1500金+15钻石+5附魔卷轴' },
+  'vip9999999':  { name:'至尊VIP',    gold:9999999, diamonds:9999999, enchScrolls:999, desc:'9999999金+9999999钻石+999附魔卷轴' },
 };
